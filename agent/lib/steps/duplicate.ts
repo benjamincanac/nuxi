@@ -77,6 +77,7 @@ export async function checkDuplicate(context: TriageContext, signal?: AbortSigna
     patch: {
       addLabels: issue.labels.includes("duplicate") ? [] : ["duplicate"],
       removeLabels: ["triage"],
+      supersedesReproduction: true,
       mentions: [{ template: "close_duplicate", detail: `Duplicate of #${duplicateOf.number}.` }],
       facts: [`This looks like a duplicate of #${duplicateOf.number} (${duplicateOf.state}). Link it.`],
     },

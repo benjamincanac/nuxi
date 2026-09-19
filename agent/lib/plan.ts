@@ -45,6 +45,8 @@ export interface TriagePlan {
   addLabels: string[];
   removeLabels: string[];
   mentions: PlannedMention[];
+  /** Slugs of the areas Jev found involved. Recorded whether or not the repo labels them. */
+  areas: string[];
   /** Facts the comment must convey. The writing model rephrases them and adds nothing. */
   facts: string[];
   /** `needs_human`: `triage` stays, nothing is written. */
@@ -69,6 +71,7 @@ export function emptyPlan(issue: IssueRef, runId: string, dryRun: boolean): Tria
     addLabels: [],
     removeLabels: [],
     mentions: [],
+    areas: [],
     facts: [],
     escalate: false,
     security: false,
@@ -86,6 +89,7 @@ export interface PlanPatch {
   addLabels?: string[];
   removeLabels?: string[];
   mentions?: PlannedMention[];
+  areas?: string[];
   facts?: string[];
   escalate?: boolean;
   security?: boolean;
@@ -94,10 +98,13 @@ export interface PlanPatch {
   type?: string;
   reproduction?: ReproductionCheck;
   latestVersion?: string;
+  /** A duplicate needs no reproduction: drops the planned `needs reproduction` and its request. */
+  supersedesReproduction?: boolean;
 }
 
 export function mergePlan(plan: TriagePlan, step: string, patch: PlanPatch): TriagePlan {
   const unique = (values: string[]) => [...new Set(values)];
+  const drop = patch.supersedesReproduction === true;
   const mentions = [...plan.mentions];
   for (const mention of patch.mentions ?? []) {
     if (!mentions.some((existing) => existing.template === mention.template)) mentions.push(mention);
@@ -105,10 +112,11 @@ export function mergePlan(plan: TriagePlan, step: string, patch: PlanPatch): Tri
   return {
     ...plan,
     setType: patch.setType ?? plan.setType,
-    addLabels: unique([...plan.addLabels, ...(patch.addLabels ?? [])]),
+    addLabels: unique([...plan.addLabels, ...(patch.addLabels ?? [])]).filter((label) => !drop || label !== "needs reproduction"),
     removeLabels: unique([...plan.removeLabels, ...(patch.removeLabels ?? [])]),
     mentions,
-    facts: [...plan.facts, ...(patch.facts ?? [])],
+    areas: unique([...plan.areas, ...(patch.areas ?? [])]),
+    facts: [...plan.facts, ...(patch.facts ?? [])].filter((fact) => !drop || fact !== "REPRODUCTION_REQUEST"),
     escalate: plan.escalate || (patch.escalate ?? false),
     security: plan.security || (patch.security ?? false),
     skipped: patch.skipped ?? plan.skipped,
