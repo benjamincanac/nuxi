@@ -1,0 +1,29 @@
+{
+  "config": {
+    "dryRun": true,
+    "maintainers": ["maintainer"],
+    "upstreams": ["unovue/reka-ui", "tailwindlabs/tailwindcss"],
+    "package": { "name": "@acme/ui", "componentPrefix": "U" },
+    "nextMajor": { "label": "v5" },
+    "reproduction": { "blank": ["acme-ui-starter"] },
+    "securityPolicy": "https://example.com/SECURITY.md",
+    "help": "https://discord.acme.dev"
+  },
+  "components": ["Button", "Select", "SelectMenu", "Modal", "Table", "Input", "Tooltip"],
+  "latestVersion": "1.4.0",
+  "issue": {
+    "title": "How do I set a default selected item on USelectMenu?",
+    "body": "I'm building a settings page and want `USelectMenu` to start with one of the options already selected instead of showing the placeholder. I tried passing `model-value` but it didn't seem to do anything. Is there a prop for this, or do I need to set it manually with a ref? Would appreciate a pointer to the right docs page too.",
+    "author": "newuser22",
+    "authorAssociation": "NONE",
+    "labels": ["triage"],
+    "type": null,
+    "createdAt": "2026-08-16T10:05:00Z",
+    "comments": []
+  },
+  "similar": [],
+  "fixedCandidates": [],
+  "upstreamCandidates": [],
+  "reproduction": null,
+  "sandboxLogs": null
+}

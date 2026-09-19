@@ -1,0 +1,40 @@
+# Example usage in a repo's workflow:
+#
+#   name: Validate nuxi config
+#   on:
+#     pull_request:
+#       paths:
+#         - .github/nuxi.yml
+#   jobs:
+#     validate:
+#       runs-on: ubuntu-latest
+#       steps:
+#         - uses: actions/checkout@v4
+#         - uses: benjamincanac/nuxi/action/validate-config@main
+#           with:
+#             path: .github/nuxi.yml
+
+name: Validate nuxi config
+description: Validates a repo's .github/nuxi.yml against the nuxi schema.
+inputs:
+  path:
+    description: Path to the config file to validate, relative to the caller's repo.
+    required: false
+    default: .github/nuxi.yml
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 24
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 11
+    - name: Install nuxi dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}/../..
+      run: pnpm install --frozen-lockfile
+    - name: Validate config
+      shell: bash
+      working-directory: ${{ github.action_path }}/../..
+      run: pnpm exec tsx scripts/validate-config.ts "${{ github.workspace }}/${{ inputs.path }}"

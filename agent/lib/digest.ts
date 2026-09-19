@@ -1,0 +1,114 @@
+import type { RepoConfig } from "../config";
+import { listOpenIssues, searchCount, searchIssues } from "./github";
+import { closedUpstreamPairs } from "./steps/upstream";
+import { listDecisions } from "./store";
+
+const WEEK_MS = 7 * 24 * 60 * 60_000;
+
+interface Link {
+  number: number;
+  title: string;
+  url: string;
+}
+
+export interface Digest {
+  repo: string;
+  awaiting: { reason: string; issues: Link[] }[];
+  duplicatesDetected: number;
+  componentClusters: { label: string; count: number }[];
+  topEnhancements: (Link & { thumbsUp: number })[];
+  sandbox: Record<string, number>;
+  totals: { triage: number; resolvedThisWeek: number };
+}
+
+async function labeled(repo: string, label: string, signal?: AbortSignal): Promise<Link[]> {
+  const items = await searchIssues(`repo:${repo} is:issue is:open label:"${label}"`, 25, signal);
+  return items.map((item) => ({ number: item.number, title: item.title, url: item.html_url }));
+}
+
+export async function buildDigest(config: RepoConfig, signal?: AbortSignal): Promise<Digest> {
+  const repo = `${config.owner}/${config.repo}`;
+  const since = new Date(Date.now() - WEEK_MS).toISOString().slice(0, 10);
+
+  const [duplicate, answered, verification, question, upstreamClosed, open, enhancements, triage, resolved, decisions] =
+    await Promise.all([
+      labeled(repo, "duplicate", signal),
+      labeled(repo, "answered", signal),
+      labeled(repo, "needs verification", signal),
+      labeled(repo, "question", signal),
+      closedUpstreamPairs(repo, signal),
+      listOpenIssues(config, [], signal),
+      searchIssues(`repo:${repo} is:issue is:open type:Enhancement sort:reactions-+1-desc`, 10, signal),
+      searchCount(`repo:${repo} is:issue is:open label:triage`, signal),
+      searchCount(`repo:${repo} is:issue closed:>=${since}`, signal),
+      listDecisions(),
+    ]);
+
+  const recent = decisions.filter((decision) => decision.repo.toLowerCase() === repo.toLowerCase() && Date.parse(decision.at) > Date.now() - WEEK_MS);
+  const clusters = new Map<string, number>();
+  for (const issue of open) {
+    for (const label of issue.labels) {
+      if (label.startsWith("component: ")) clusters.set(label, (clusters.get(label) ?? 0) + 1);
+    }
+  }
+
+  const sandbox: Record<string, number> = {};
+  for (const decision of recent) {
+    if (decision.step !== "sandbox") continue;
+    const outcome = (decision.actions as { outcome?: string } | null)?.outcome ?? "unknown";
+    sandbox[outcome] = (sandbox[outcome] ?? 0) + 1;
+  }
+
+  return {
+    repo,
+    awaiting: [
+      { reason: "Close as duplicate", issues: duplicate },
+      { reason: "Close as answered", issues: answered },
+      { reason: "Verify fixed", issues: verification },
+      { reason: "Convert to Q&A", issues: question },
+      {
+        reason: "Upstream closed",
+        issues: upstreamClosed.map((pair) => ({ number: pair.issueNumber, title: `${pair.upstreamRepo}#${pair.upstreamIssueNumber} closed`, url: `https://github.com/${pair.repo}/issues/${pair.issueNumber}` })),
+      },
+    ].filter((group) => group.issues.length > 0),
+    duplicatesDetected: recent.filter((decision) => decision.step === "duplicate" && JSON.stringify(decision.actions).includes("close_duplicate")).length,
+    componentClusters: [...clusters].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count).slice(0, 8),
+    topEnhancements: enhancements.map((item) => ({ number: item.number, title: item.title, url: item.html_url, thumbsUp: item.reactions?.["+1"] ?? 0 })),
+    sandbox,
+    totals: { triage, resolvedThisWeek: resolved },
+  };
+}
+
+function links(items: Link[], max = 10): string {
+  const lines = items.slice(0, max).map((item) => `[#${item.number}](${item.url}) ${item.title.slice(0, 70)}`);
+  if (items.length > max) lines.push(`and ${items.length - max} more`);
+  return lines.join("\n").slice(0, 1_024);
+}
+
+/** Discord embeds for the weekly digest. One message per repo. */
+export function digestEmbeds(digest: Digest): Record<string, unknown>[] {
+  const fields = digest.awaiting.map((group) => ({ name: `${group.reason} (${group.issues.length})`, value: links(group.issues) }));
+  if (digest.componentClusters.length) {
+    fields.push({ name: "Top clusters", value: digest.componentClusters.map((cluster) => `\`${cluster.label}\` ${cluster.count}`).join("\n") });
+  }
+  const sandbox = Object.entries(digest.sandbox);
+  if (sandbox.length) fields.push({ name: "Sandbox runs", value: sandbox.map(([outcome, count]) => `${outcome}: ${count}`).join("\n") });
+
+  const embeds: Record<string, unknown>[] = [
+    {
+      title: `${digest.repo} weekly triage`,
+      url: `https://github.com/${digest.repo}/issues`,
+      description: `**${digest.totals.triage}** still in \`triage\`, **${digest.totals.resolvedThisWeek}** closed this week, **${digest.duplicatesDetected}** duplicates detected.`,
+      color: 0x00dc82,
+      fields: fields.slice(0, 25),
+    },
+  ];
+  if (digest.topEnhancements.length) {
+    embeds.push({
+      title: "Top enhancements by 👍",
+      color: 0xa2eeef,
+      description: digest.topEnhancements.map((item) => `${item.thumbsUp} 👍 [#${item.number}](${item.url}) ${item.title.slice(0, 70)}`).join("\n").slice(0, 4_000),
+    });
+  }
+  return embeds;
+}

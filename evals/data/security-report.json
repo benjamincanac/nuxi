@@ -1,0 +1,28 @@
+{
+  "config": {
+    "dryRun": true,
+    "maintainers": ["maintainer"],
+    "upstreams": ["unovue/reka-ui", "tailwindlabs/tailwindcss"],
+    "package": { "name": "@acme/ui", "componentPrefix": "U" },
+    "nextMajor": { "label": "v5" },
+    "reproduction": { "blank": ["acme-ui-starter"] },
+    "securityPolicy": "https://example.com/SECURITY.md"
+  },
+  "components": ["Button", "Select", "SelectMenu", "Modal", "Table", "Input", "Tooltip"],
+  "latestVersion": "1.4.0",
+  "issue": {
+    "title": "XSS in UTable cell renderer via unsanitized column formatter output",
+    "body": "### Description\n\n`UTable`'s `cell` render function for a column injects the returned string directly into the DOM without escaping it. If the value comes from user input (e.g. a name field), an attacker can inject a script.\n\n### Proof of concept\n\n```js\nconst columns = [{ accessorKey: 'name', cell: (row) => row.name }]\nconst rows = [{ name: '<img src=x onerror=alert(document.cookie)>' }]\n```\n\nRendering this table executes the `onerror` handler and can exfiltrate cookies from any page that renders untrusted data in a column.\n\n### Impact\n\nAny app that renders user-controlled strings through a `UTable` column formatter is vulnerable to stored or reflected XSS.",
+    "author": "securityresearcher",
+    "authorAssociation": "NONE",
+    "labels": ["triage"],
+    "type": null,
+    "createdAt": "2026-08-20T07:00:00Z",
+    "comments": []
+  },
+  "similar": [],
+  "fixedCandidates": [],
+  "upstreamCandidates": [],
+  "reproduction": null,
+  "sandboxLogs": null
+}

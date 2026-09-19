@@ -1,0 +1,28 @@
+{
+  "config": {
+    "dryRun": true,
+    "maintainers": ["maintainer"],
+    "upstreams": ["unovue/reka-ui", "tailwindlabs/tailwindcss"],
+    "package": { "name": "@acme/ui", "componentPrefix": "U" },
+    "nextMajor": { "label": "v5" },
+    "reproduction": { "blank": ["acme-ui-starter"] },
+    "securityPolicy": "https://example.com/SECURITY.md"
+  },
+  "components": ["Button", "Select", "SelectMenu", "Modal", "Table", "Input", "Tooltip"],
+  "latestVersion": "1.4.0",
+  "issue": {
+    "title": "UTable header cells are missing aria-sort, screen readers don't announce sort state",
+    "body": "### Environment\n\n- @acme/ui: 1.4.0\n- Screen reader: VoiceOver on macOS 15, Safari\n\n### Description\n\nSortable `UTable` column headers render as `<th>` with a click handler but no `aria-sort` attribute. VoiceOver never announces whether a column is sorted or in which direction, so keyboard and screen reader users have no way to tell the current sort state.\n\n### Expected behavior\n\nEach sortable header should expose `aria-sort=\"ascending\" | \"descending\" | \"none\"` and update it when the sort changes, per the WAI-ARIA table sorting pattern.\n\n### Actual behavior\n\nNo `aria-sort` attribute is present in the rendered markup at all.",
+    "author": "a11yalex",
+    "authorAssociation": "NONE",
+    "labels": ["triage"],
+    "type": null,
+    "createdAt": "2026-08-19T13:10:00Z",
+    "comments": []
+  },
+  "similar": [],
+  "fixedCandidates": [],
+  "upstreamCandidates": [],
+  "reproduction": null,
+  "sandboxLogs": null
+}

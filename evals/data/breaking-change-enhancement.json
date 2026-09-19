@@ -1,0 +1,28 @@
+{
+  "config": {
+    "dryRun": true,
+    "maintainers": ["maintainer"],
+    "upstreams": ["unovue/reka-ui", "tailwindlabs/tailwindcss"],
+    "package": { "name": "@acme/ui", "componentPrefix": "U" },
+    "nextMajor": { "label": "v5" },
+    "reproduction": { "blank": ["acme-ui-starter"] },
+    "securityPolicy": "https://example.com/SECURITY.md"
+  },
+  "components": ["Button", "Select", "SelectMenu", "Modal", "Table", "Input", "Tooltip"],
+  "latestVersion": "1.4.0",
+  "issue": {
+    "title": "Allow overriding UButton's default variant through the app config",
+    "body": "### Description\n\nRight now `UButton` always defaults to `variant: 'solid'` unless every single usage passes `variant` explicitly. We'd like to set the default variant once, globally, through `app.config.ts`, the same way the color can be overridden.\n\n### Why\n\nOur design system uses `outline` everywhere and passing `variant=\"outline\"` on every button call site is repetitive and easy to forget.\n\n### Considered alternative\n\nA global wrapper component, but that loses typing and slot forwarding.\n\nI understand this changes the resolved default for anyone relying on the current implicit `solid` default, so it would need to ship as a documented default change rather than a patch.",
+    "author": "designsystemteam",
+    "authorAssociation": "NONE",
+    "labels": ["triage"],
+    "type": "Enhancement",
+    "createdAt": "2026-08-06T10:00:00Z",
+    "comments": []
+  },
+  "similar": [],
+  "fixedCandidates": [],
+  "upstreamCandidates": [],
+  "reproduction": null,
+  "sandboxLogs": null
+}

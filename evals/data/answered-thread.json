@@ -1,0 +1,45 @@
+{
+  "config": {
+    "dryRun": true,
+    "maintainers": ["maintainer"],
+    "upstreams": ["unovue/reka-ui", "tailwindlabs/tailwindcss"],
+    "package": { "name": "@acme/ui", "componentPrefix": "U" },
+    "nextMajor": { "label": "v5" },
+    "reproduction": { "blank": ["acme-ui-starter"] },
+    "securityPolicy": "https://example.com/SECURITY.md"
+  },
+  "components": ["Button", "Select", "SelectMenu", "Modal", "Table", "Input", "Tooltip"],
+  "latestVersion": "1.4.0",
+  "issue": {
+    "title": "UTooltip flickers when navigating a UTable row with arrow keys",
+    "body": "### Environment\n\n- @acme/ui: 1.3.2\n- Vue: 3.5.13\n\n### Description\n\nWhen I use arrow keys to move focus between cells in `UTable`, any `UTooltip` attached to a cell flickers open and closed rapidly instead of just following focus smoothly.\n\n### Expected behavior\n\nThe tooltip should show and hide cleanly as focus moves.",
+    "author": "keithw",
+    "authorAssociation": "NONE",
+    "labels": ["triage"],
+    "type": null,
+    "createdAt": "2026-08-01T09:00:00Z",
+    "comments": [
+      {
+        "id": 1,
+        "author": "maintainer",
+        "authorType": "User",
+        "authorAssociation": "MEMBER",
+        "body": "This is expected right now: UTooltip re-evaluates its position on every focus event, and arrow key navigation fires several in quick succession. Set `:delay-duration=\"0\"` and `:disable-hoverable-content=\"true\"` on the tooltip to avoid the flicker until we batch these updates.",
+        "createdAt": "2026-08-02T13:15:00Z"
+      },
+      {
+        "id": 2,
+        "author": "keithw",
+        "authorType": "User",
+        "authorAssociation": "NONE",
+        "body": "That fixed it, thanks! No more flicker with those props set.",
+        "createdAt": "2026-08-02T15:40:00Z"
+      }
+    ]
+  },
+  "similar": [],
+  "fixedCandidates": [],
+  "upstreamCandidates": [],
+  "reproduction": null,
+  "sandboxLogs": null
+}

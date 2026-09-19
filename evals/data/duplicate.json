@@ -1,0 +1,50 @@
+{
+  "config": {
+    "dryRun": true,
+    "maintainers": ["maintainer"],
+    "upstreams": ["unovue/reka-ui", "tailwindlabs/tailwindcss"],
+    "package": { "name": "@acme/ui", "componentPrefix": "U" },
+    "nextMajor": { "label": "v5" },
+    "reproduction": { "blank": ["acme-ui-starter"] },
+    "securityPolicy": "https://example.com/SECURITY.md"
+  },
+  "components": ["Button", "Select", "SelectMenu", "Modal", "Table", "Input", "Tooltip"],
+  "latestVersion": "1.4.0",
+  "issue": {
+    "title": "UTable sort icon doesn't rotate when clicking a column header",
+    "body": "### Environment\n\n- @acme/ui: 1.4.0\n- Vue: 3.5.13\n\n### Description\n\nClicking a sortable column header on `UTable` sorts the rows correctly, but the little chevron icon next to the header label never rotates to show ascending vs descending. It stays pointing down no matter the sort direction.\n\n### Expected behavior\n\nThe icon should flip depending on sort direction, like it used to in 1.2.x.",
+    "author": "devonhall",
+    "authorAssociation": "NONE",
+    "labels": ["triage"],
+    "type": null,
+    "createdAt": "2026-08-14T16:30:00Z",
+    "comments": []
+  },
+  "similar": [
+    {
+      "number": 101,
+      "title": "Table sort icon stuck pointing down after clicking header",
+      "state": "open",
+      "url": "https://github.com/acme/ui/issues/101",
+      "body": "Same as above, the chevron on the sortable column header never rotates when toggling sort direction on UTable."
+    },
+    {
+      "number": 88,
+      "title": "Table column resize breaks on Firefox",
+      "state": "open",
+      "url": "https://github.com/acme/ui/issues/88",
+      "body": "Dragging a column border to resize it does nothing in Firefox, works in Chrome."
+    },
+    {
+      "number": 77,
+      "title": "Select value binding lost after form reset",
+      "state": "closed",
+      "url": "https://github.com/acme/ui/issues/77",
+      "body": "Calling form.reset() clears the visual value of USelect but the underlying model still holds the old value."
+    }
+  ],
+  "fixedCandidates": [],
+  "upstreamCandidates": [],
+  "reproduction": null,
+  "sandboxLogs": null
+}
