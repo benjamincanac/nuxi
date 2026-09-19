@@ -106,10 +106,20 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
       decided = true;
     }
 
+    // A resolved thread wins over everything below: nobody needs a reproduction for a solved problem.
+    const resolved = has("answered") || (isEnabled(config, "answered") && answers.is_answered.probability >= t.answered);
+    if (resolved) {
+      if (!has("answered")) {
+        labels.push("answered");
+        mentions.push({ template: "close_answered", detail: `The thread looks resolved.${summary}` });
+      }
+      decided = true;
+    }
+
     // Asking for a reproduction ends the run. "Please reproduce" next to "this is fixed" or
     // "this is a duplicate" in the same comment would contradict itself.
     let waitsForReproduction = false;
-    if (type === "Bug" && isEnabled(config, "reproduction")) {
+    if (!resolved && type === "Bug" && isEnabled(config, "reproduction")) {
       if (answers.has_reproduction.probability < t.has_reproduction) {
         waitsForReproduction = true;
         if (!has("needs reproduction")) {
@@ -123,18 +133,12 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
       }
     }
 
-    if (!waitsForReproduction) {
+    if (!resolved && !waitsForReproduction) {
       if (isEnabled(config, "fixed") && type === "Bug" && !has("needs verification")) next.push("check_fixed_in_release");
       if (isEnabled(config, "duplicate") && !has("duplicate")) next.push("check_duplicate");
     }
 
-    if (isEnabled(config, "answered") && !has("answered") && answers.is_answered.probability >= t.answered) {
-      labels.push("answered");
-      mentions.push({ template: "close_answered", detail: `The thread looks resolved.${summary}` });
-      decided = true;
-    }
-
-    if (isEnabled(config, "breaking") && config.nextMajor && answers.needs_breaking_change.probability >= t.labels) {
+    if (!resolved && !waitsForReproduction && isEnabled(config, "breaking") && config.nextMajor && answers.needs_breaking_change.probability >= t.labels) {
       labels.push(config.nextMajor.label);
       decided = true;
     }

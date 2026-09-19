@@ -6,7 +6,7 @@ import github from "../channels/github";
 import { requireApproval, type RepoConfig } from "../config";
 import { loadRepoConfig } from "./github";
 import { ask, clip } from "./jev";
-import { allowPreviewWrite, drainQueue, enqueue, forceDryRun, type QueueItem, type QueueReason } from "./store";
+import { allowPreviewWrite, drainQueue, enqueue, forceDryRun, markOnce, type QueueItem, type QueueReason } from "./store";
 
 type Auth = Parameters<ReturnType<ScheduleToFn>["send"]>[1]["auth"];
 
@@ -49,6 +49,8 @@ export function triagePrompt(item: QueueItem, config: RepoConfig, triageRequeste
   }
 }
 
+const MAX_DISPATCH_ATTEMPTS = 4;
+
 // Someone waiting for an answer wins over a scheduled pass on the same issue.
 const PRIORITY: Record<QueueReason, number> = {
   mention: 0,
@@ -65,7 +67,9 @@ const PRIORITY: Record<QueueReason, number> = {
 export function collapse(items: QueueItem[]): QueueItem[] {
   const groups = new Map<string, QueueItem>();
   for (const item of items) {
-    const key = `${target(item)}:${item.reason === "pull_request"}`.toLowerCase();
+    // An upstream closure is announced once and already marked as such, so it never merges into another run.
+    const kind = item.reason === "pull_request" || item.reason === "upstream_closed" ? item.reason : "issue";
+    const key = `${target(item)}:${kind}`.toLowerCase();
     const current = groups.get(key);
     if (!current) {
       groups.set(key, item);
@@ -88,8 +92,14 @@ export async function drainAndDispatch(to: ScheduleToFn, auth: Auth, limit: numb
     try {
       await dispatch(to, auth, item);
     } catch (error) {
-      console.error(`[nuxi] dispatch failed for ${target(item)}, retrying in 10 minutes`, error);
-      await enqueue({ ...item, notBefore: Date.now() + 10 * 60_000 });
+      const attempts = (item.attempts ?? 0) + 1;
+      if (attempts >= MAX_DISPATCH_ATTEMPTS) {
+        // A deleted issue or a removed config fails forever. The daily sweep re-queues what still matters.
+        console.error(`[nuxi] dispatch failed ${attempts} times for ${target(item)}, dropped`, error);
+        continue;
+      }
+      console.error(`[nuxi] dispatch failed for ${target(item)}, attempt ${attempts}`, error);
+      await enqueue({ ...item, attempts, notBefore: Date.now() + attempts * 10 * 60_000 });
     }
   }
   return items.length;
@@ -99,7 +109,7 @@ export async function drainAndDispatch(to: ScheduleToFn, auth: Auth, limit: numb
  * Starts one triage session. Runs that may need a maintainer's approval start in the Discord
  * approvals channel, where the prompt renders as buttons. Everything else runs silently on the issue thread.
  */
-export async function dispatch(to: ScheduleToFn, auth: Auth, item: QueueItem): Promise<"discord" | "github" | "disabled"> {
+export async function dispatch(to: ScheduleToFn, auth: Auth, item: QueueItem): Promise<"discord" | "github" | "disabled" | "skipped"> {
   const config = await loadRepoConfig(item);
   if (!config) return "disabled";
   if (item.explicit) await allowPreviewWrite(item);
@@ -117,6 +127,10 @@ export async function dispatch(to: ScheduleToFn, auth: Auth, item: QueueItem): P
     item.reason === "mention"
       ? (await ask(mentionQuestions, { comment: clip(item.text ?? "", 2_000) })).is_triage_request.probability >= config.thresholds.labels
       : false;
+  // "I only triage issues" is said once per issue, however many times the bot is pinged.
+  // Dry runs post nothing, so they do not consume the marker.
+  const writes = !config.dryRun && !item.dryRun;
+  if (item.reason === "mention" && !triageRequested && writes && !(await markOnce(item, "mention-refusal"))) return "skipped";
   const message = triagePrompt(item, config, triageRequested);
 
   if (needsApproval && approvals) {

@@ -48,6 +48,8 @@ export interface QueueItem extends IssueRef {
   explicit?: boolean;
   /** Backfills: the run must not write, whatever the repo config says. */
   dryRun?: boolean;
+  /** Failed dispatches so far. The item is dropped after `MAX_DISPATCH_ATTEMPTS`. */
+  attempts?: number;
 }
 
 interface KeyValue {
@@ -220,8 +222,10 @@ export function setLastAnnounced(ref: IssueRef, fingerprint: string): Promise<vo
 }
 
 /** Backfills run the real pipeline on a repo that may have `dryRun: false`. They must not write. */
+// Set when the run is dispatched and keyed by issue, since the run id is not known yet. The window is
+// kept short: a real event on the same issue within it also runs dry, and the daily sweep catches up.
 export function forceDryRun(ref: IssueRef): Promise<void> {
-  return kv().set(`nuxi:dry:${issueKey(ref)}`, Date.now(), 6 * 60 * 60);
+  return kv().set(`nuxi:dry:${issueKey(ref)}`, Date.now(), 20 * 60);
 }
 
 export async function isDryRunForced(ref: IssueRef): Promise<boolean> {
