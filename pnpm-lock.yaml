@@ -11,9 +11,6 @@ importers:
       '@github-tools/eve-extension':
         specifier: ^0.7.1
         version: 0.7.1(@vercel/connect@2.2.0(ai@7.0.106(zod@4.5.4))(eve@0.58.1(ai@7.0.106(zod@4.5.4))))(ai@7.0.106(zod@4.5.4))(eve@0.58.1(ai@7.0.106(zod@4.5.4)))
-      '@github-tools/sdk':
-        specifier: ^1.16.1
-        version: 1.16.1(@vercel/connect@2.2.0(ai@7.0.106(zod@4.5.4))(eve@0.58.1(ai@7.0.106(zod@4.5.4))))(ai@7.0.106(zod@4.5.4))(eve@0.58.1(ai@7.0.106(zod@4.5.4)))(zod@4.5.4)
       '@upstash/redis':
         specifier: ^1.38.4
         version: 1.38.4

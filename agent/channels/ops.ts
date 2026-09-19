@@ -8,6 +8,7 @@ import { postEmbeds } from "../lib/discord";
 import { isProduction } from "../config";
 import { dispatch, drainAndDispatch } from "../lib/dispatch";
 import { listOpenIssues, loadRepoConfig } from "../lib/github";
+import { openSetupPullRequest, proposeSetup } from "../lib/setup";
 import { DISPATCH_BATCH, sweepRepo } from "../lib/sweep";
 import { enqueue, listDecisions } from "../lib/store";
 
@@ -19,7 +20,8 @@ const OPS_AUTH = {
 } as const;
 
 const triggerBody = z.object({
-  repo: z.string().regex(/^[\w.-]+\/[\w.-]+$/),
+  // No leading dot: `..` would walk the API path.
+  repo: z.string().regex(/^[\w-][\w.-]*\/[\w-][\w.-]*$/),
   issueNumber: z.number().int().positive().optional(),
   limit: z.number().int().positive().max(1_000).optional(),
   /** Without it a preview deployment logs what it would do and writes nothing. */
@@ -47,6 +49,13 @@ export default defineChannel({
       if (!body.success) return Response.json({ error: z.prettifyError(body.error) }, { status: 400 });
 
       const [owner = "", repo = ""] = body.data.repo.split("/");
+
+      // The one trigger that runs on a repository without a config, since it creates it.
+      if (params.id === "setup") {
+        if (!body.data.write) return Response.json(await proposeSetup({ owner, repo }));
+        return Response.json(await openSetupPullRequest({ owner, repo }));
+      }
+
       const config = await loadRepoConfig({ owner, repo });
       if (!config) return Response.json({ error: `Triage is disabled for ${body.data.repo}: no valid .github/nuxi.yml.` }, { status: 404 });
       const explicit = body.data.write;
@@ -85,7 +94,7 @@ export default defineChannel({
           return Response.json(digest);
         }
         default:
-          return Response.json({ error: `Unknown trigger ${params.id}`, available: ["triage", "sweep", "backfill", "digest"] }, { status: 404 });
+          return Response.json({ error: `Unknown trigger ${params.id}`, available: ["triage", "sweep", "backfill", "digest", "setup"] }, { status: 404 });
       }
     }),
 

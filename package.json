@@ -13,6 +13,7 @@
     "eval": "eve eval",
     "backfill": "tsx --env-file-if-exists=.env.local scripts/backfill.ts",
     "labels": "tsx --env-file-if-exists=.env.local scripts/setup-labels.ts",
+    "propose-setup": "tsx --env-file-if-exists=.env.local scripts/propose-setup.ts",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed-playground.ts",
     "start": "eve start",
     "typecheck": "tsc",
@@ -20,7 +21,6 @@
   },
   "dependencies": {
     "@github-tools/eve-extension": "^0.7.1",
-    "@github-tools/sdk": "^1.16.1",
     "@upstash/redis": "^1.38.4",
     "@vercel/connect": "2.2.0",
     "ai": "^7.0.105",
@@ -35,5 +35,6 @@
   },
   "engines": {
     "node": "24.x"
-  }
+  },
+  "packageManager": "pnpm@11.23.0"
 }

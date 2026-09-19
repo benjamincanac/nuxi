@@ -69,9 +69,12 @@ vercel connect attach github/nuxi-preview --environment preview --environment de
 | Permission | Access |
 | --- | --- |
 | Issues | Read and write |
-| Pull requests | Read |
-| Contents | Read |
+| Pull requests | Read and write |
+| Contents | Read and write |
+| Workflows | Read and write |
 | Metadata | Read |
+
+Issues write is what triage uses. The other three write permissions exist for one thing, the setup pull request of step 12: Contents to push the `nuxi/setup` branch, Pull requests to open it, Workflows to delete the workflow files nuxi replaces. nuxi never pushes to a default branch. Without Workflows the PR still opens, with the config only, and its body lists the files to delete by hand. With Contents and Pull requests left on read, skip the automatic PR and commit the file yourself.
 
 No trigger is attached to this connector. Previews never react to webhooks, they are driven through the ops route.
 
@@ -219,12 +222,38 @@ curl -X POST https://<production-url>/ops/digest/trigger \
 
 ## 12. Go to a real repository
 
-1. Open a pull request on the repository adding `.github/nuxi.yml`, starting from [`examples/nuxt-ui.nuxi.yml`](../examples/nuxt-ui.nuxi.yml) with `dryRun: true`. Add the validation workflow from [`MIGRATION.md`](../MIGRATION.md) so later edits are checked.
-2. `pnpm labels <owner>/<repo> --dry-run`, then without the flag.
-3. Install the production app on the organization, limited to that repository. No code change and no redeploy. The repository is picked up as soon as the file is on the default branch, within 5 minutes.
-4. Let it run dry for a few days. Read `GET /ops/decisions?repo=<owner>/<repo>&since=<iso date>` or run `pnpm backfill <owner>/<repo> --url https://<production-url>` for a CSV that includes sandbox runs. Adjust `thresholds` in the repository's file.
-5. Set `dryRun: false`. Writes still wait for your approval in Discord.
-6. When you trust it, set `NUXI_REQUIRE_APPROVAL=false` and redeploy. Then follow [`MIGRATION.md`](../MIGRATION.md) to remove the workflows it replaces.
+1. See what nuxi would propose, without writing anything: `pnpm propose-setup <owner>/<repo>`. It prints the detected `.github/nuxi.yml` and the pull request body, including the workflows it would remove.
+2. Install the production app on the organization, limited to that repository. No code change and no redeploy.
+3. nuxi opens one pull request from the `nuxi/setup` branch. It contains the config with `dryRun: true`, and deletes the workflows nuxi replaces: `Hebilicious/reproduire`, and `actions/stale` jobs that only target `triage`, `needs reproduction` or `stale`. A stale workflow that covers pull requests or other labels is kept, and the body gives the `exempt-issue-labels` to add. The daily sweep opens it at 03:00 UTC. To get it now:
+
+   ```sh
+   curl -X POST https://<production-url>/ops/setup/trigger \
+     -H "authorization: Bearer <production secret>" -H "content-type: application/json" \
+     -d '{ "repo": "<owner>/<repo>", "write": true }'
+   ```
+
+   Without `"write": true` the route returns the proposal as JSON. On Discord, `/ask message: set up <owner>/<repo>` does the same behind an approval. A repository that already has the file, or a setup pull request in any state, is left alone, so closing the PR is a final no. The automatic path is off when the installation covers more than 10 repositories, or with `NUXI_AUTO_SETUP=false`.
+4. Review the PR. Fix what the "To check" section lists, add `package.componentPrefix` and `nextMajor.package` if they apply, and compare with [`examples/nuxt-ui.nuxi.yml`](../examples/nuxt-ui.nuxi.yml). If you want to keep the old workflows while nuxi runs dry, drop the deletion commits from the branch and remove the files later. Merge. The repository is picked up within 5 minutes.
+5. `pnpm labels <owner>/<repo> --dry-run`, then without the flag.
+6. Let it run dry for a few days. Read `GET /ops/decisions?repo=<owner>/<repo>&since=<iso date>` or run `pnpm backfill <owner>/<repo> --url https://<production-url>` for a CSV that includes sandbox runs. Adjust `thresholds` in the repository's file.
+7. Set `dryRun: false`. Writes still wait for your approval in Discord.
+8. When you trust it, set `NUXI_REQUIRE_APPROVAL=false` and redeploy.
+
+To have later edits of the file checked on pull requests, add this workflow to the repository:
+
+```yaml
+# .github/workflows/nuxi-config.yml
+name: nuxi config
+on:
+  pull_request:
+    paths: ['.github/nuxi.yml']
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: benjamincanac/nuxi/action/validate-config@main
+```
 
 To follow a public repository before the app is installed on it, set `NUXI_EXTRA_REPOS=<owner>/<repo>`. It still needs the config file in that repository, so this is mostly useful for forks and mirrors.
 

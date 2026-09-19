@@ -106,13 +106,23 @@ vercel connect create github --name nuxi-preview
 vercel connect attach github/nuxi-preview --environment preview --environment development
 ```
 
-The GitHub App needs read and write on Issues, read on Pull requests, Contents and Metadata, and the `issues`, `issue_comment` and `pull_request` events. Install it from the Connect dashboard on your personal account with the playground repository only. Reading a public repository such as `nuxt/ui` needs no installation. When the bot is validated, install the same app on the target organization. No code change, the repositories are picked up as soon as they carry a valid `.github/nuxi.yml`.
+The GitHub App needs read and write on Issues, and the `issues`, `issue_comment` and `pull_request` events. Read and write on Contents, Pull requests and Workflows is only used by the setup pull request below. Install it from the Connect dashboard on your personal account with the playground repository only. Reading a public repository such as `nuxt/ui` needs no installation. When the bot is validated, install the same app on the target organization. No code change, the repositories are picked up as soon as they carry a valid `.github/nuxi.yml`.
 
 If another project later needs GitHub access under the nuxi identity, attach `github/nuxi` to it instead of creating a second app.
 
 For Discord, `pnpm eve add channel/discord` creates the connector, registers `/ask` and points the application's Interactions Endpoint URL at Connect. Keep the existing `agent/channels/discord.ts`, do not pass `--overwrite`. The eve Discord channel works over HTTP interactions, so the conversation happens through `/ask`, in a channel or in a DM with the app.
 
 The full walkthrough, Discord included, is in [`docs/SETUP.md`](docs/SETUP.md).
+
+## Setup pull request
+
+When the app is installed on a repository without `.github/nuxi.yml`, nuxi opens one pull request from a `nuxi/setup` branch. See [`agent/lib/setup.ts`](agent/lib/setup.ts).
+
+- The config is detected from the repository: maintainers from CODEOWNERS, the package from `package.json`, the components glob, upstreams from the existing `upstream/*` labels resolved through the dependencies, the next major from a `vN` label with a matching branch, reproduction links from an existing reproduire template, the security policy and the homepage. It always starts with `dryRun: true`, and it is validated against the schema before anything is pushed.
+- Workflows that overlap with nuxi are deleted in the same PR: `Hebilicious/reproduire` with its template, and `actions/stale` jobs that only target labels nuxi owns. A stale workflow with a wider scope is kept, and the body gives the `exempt-issue-labels` to add. Detection is a fixed list of known actions, not a model's guess.
+- What could not be detected is listed under "To check" in the PR body.
+
+`pnpm propose-setup <owner/repo>` prints the same thing locally and writes nothing. There is no installation webhook in eve's GitHub channel, so the PR is opened by the daily sweep, by `POST /ops/setup/trigger`, or on a maintainer's request on Discord. A repository with the file, or with a setup PR in any state, is left alone. The automatic path stays off when the installation covers more than 10 repositories, or with `NUXI_AUTO_SETUP=false`.
 
 Deploy with `pnpm run deploy`. Add Upstash Redis from the Vercel Marketplace and set `INTERNAL_API_SECRET`.
 
@@ -146,7 +156,7 @@ curl -X POST https://<preview>/ops/triage/trigger \
   -d '{ "repo": "<you>/nuxi-triage-playground", "issueNumber": 12, "write": true }'
 ```
 
-Triggers: `triage`, `sweep`, `backfill`, `digest`. A preview never writes unless the request carries `"write": true`. `GET /ops/decisions?repo=&since=` exports the decision log as JSONL for threshold tuning.
+Triggers: `triage`, `sweep`, `backfill`, `digest`, `setup`. A preview never writes unless the request carries `"write": true`. `GET /ops/decisions?repo=&since=` exports the decision log as JSONL for threshold tuning.
 
 ## Schedules
 
