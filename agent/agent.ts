@@ -1,15 +1,11 @@
 import { defineAgent } from "eve";
-import { autoModel } from "eve/experimental/evaluate";
 
 export default defineAgent({
-  // Jev picks the writing model per turn. Classification never happens here: every closed
-  // decision is taken by Jev inside the tools, the model writes the comment and picks the mention template.
-  model: autoModel({
-    options: {
-      "anthropic/claude-sonnet-5":
-        "Writing comments for ambiguous, escalated or duplicate issues, reading screenshots, and answering a maintainer's backlog questions",
-      "anthropic/claude-haiku-4.5": "Routine issues where Jev results are high-confidence",
-    },
-  }),
-  reasoning: "low",
+  // nuxi never needs bash, file, web or subagent tools: every capability is an authored tool.
+  // Fewer tools in the prompt is cheaper and keeps a small model on the pipeline.
+  defaultTools: false,
+  // Every decision is taken by Jev inside the tools. The model only follows the skill, writes the
+  // comment and picks the mention template, so the cheapest model is enough.
+  model: "zai/glm-4.7-flashx",
+  reasoning: "none",
 });

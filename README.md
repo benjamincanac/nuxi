@@ -14,7 +14,8 @@ classify_issue ─▶ track_upstream ─▶ validate_reproduction ─▶ run_san
                ─▶ check_fixed_in_release ─▶ check_duplicate ─▶ apply_triage
 ```
 
-- Every decision is taken by Jev (`typesafe-ai/jev`) inside a tool and compared with the repository's thresholds. The model never classifies and never sees a probability. It only writes the comment. Questions live in [`agent/lib/jev/questions.ts`](agent/lib/jev/questions.ts).
+- Every decision is taken by Jev (`typesafe-ai/jev`) inside a tool and compared with the repository's thresholds. The model never classifies and never sees a probability. It only follows the skill and writes the comment, so it is a cheap one, see [`agent/agent.ts`](agent/agent.ts). Questions live in [`agent/lib/jev/questions.ts`](agent/lib/jev/questions.ts).
+- The model sees only nuxi's own tools. eve's built-ins are off and there is no GitHub tool library: the pipeline tools read GitHub themselves, and `search_issues` covers a maintainer's questions.
 - [`apply_triage`](agent/tools/apply_triage.ts) is the only tool that writes to an issue. It enforces dry-run, one comment of 80 words per run, the label allow-list, and the rule that human applied labels stay.
 - Runs that need an approval happen in a Discord channel, with Approve and Cancel buttons. Without that channel they are forced to dry-run.
 - Text written by GitHub users never reaches the model's prompt. An @-mention is reduced by Jev to "triage request or not".
@@ -66,6 +67,7 @@ For a bug whose reproduction is a repository, nuxi builds it against the latest 
 | Command | What it does |
 | --- | --- |
 | `pnpm dev` | Local agent with the eve terminal UI |
+| `pnpm eval triage/<name>` | One eval |
 | `pnpm eval` | Runs the [evals](evals), which call Jev and the model but never GitHub |
 | `pnpm typecheck`, `pnpm build` | Validation |
 | `pnpm validate-config [file]` | Checks a `nuxi.yml`, `.github/nuxi.yml` by default |

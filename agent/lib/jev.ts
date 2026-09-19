@@ -4,7 +4,7 @@ import {
   type JSONValue,
 } from "ai";
 
-/** Same default evaluator as eve's `autoModel`. Resolved through AI Gateway. */
+/** Resolved through AI Gateway. */
 export function jevModel(): string {
   return process.env.JEV_MODEL ?? "typesafe-ai/jev";
 }

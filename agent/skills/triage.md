@@ -6,6 +6,13 @@ description: Use for every triage, re-triage, sweep, pull request or comment eve
 
 Every tool takes `owner`, `repo` and `issueNumber`. Tools record their decisions in the run's plan. You read their `facts` and `next`, you do not decide anything yourself.
 
+Four rules hold for the whole run:
+
+1. Call a tool only when this page tells you to, or when a tool returned its name in `next`. A tool missing from `next` must not be called, whatever the issue looks like.
+2. Call each tool at most once.
+3. `search_issues` is for a maintainer's questions, never for a triage run. The pipeline tools read GitHub themselves.
+4. End every run with `apply_triage`, even when there is nothing to write.
+
 ## 1. Entry
 
 Start with the tool named in the turn.
