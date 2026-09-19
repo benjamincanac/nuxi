@@ -10,7 +10,7 @@ export default defineEval({
     t.calledTool("classify_issue");
     t.calledTool("apply_triage");
     t.judge.autoevals
-      .closedQA("States that the issue was labeled a11y because it is about accessibility and screen reader support.", {
+      .closedQA("States that the a11y label was added to the issue.", {
         on: t.transcript,
       })
       .atLeast(0.7);

@@ -2,7 +2,7 @@ import type { Experimental_EvaluationQuestion as Question } from "ai";
 import type { SandboxSession } from "eve/sandbox";
 import { z } from "zod";
 
-import type { RepoConfig } from "../../config";
+import { sourceRepo, type RepoConfig } from "../../config";
 import type { ReproductionCheck, TriageContext } from "../context";
 import { gh, githubToken } from "../github";
 import { ask, clip } from "../jev";
@@ -45,8 +45,8 @@ const commitSchema = z.object({ sha: z.string() });
 async function nextMajorPackage(config: RepoConfig, signal?: AbortSignal): Promise<string | null> {
   const next = config.nextMajor;
   if (!next?.branch || !next.package) return null;
-  const source = config.componentsSource ?? `${config.owner}/${config.repo}`;
-  const { sha } = await gh(commitSchema, `/repos/${source}/commits/${encodeURIComponent(next.branch)}`, { signal });
+  const source = sourceRepo(config);
+  const { sha } = await gh(commitSchema, `/repos/${source.owner}/${source.repo}/commits/${encodeURIComponent(next.branch)}`, { signal });
   return next.package.replace("{sha}", sha.slice(0, 7));
 }
 

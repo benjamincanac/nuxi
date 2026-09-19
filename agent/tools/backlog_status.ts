@@ -7,7 +7,7 @@ import { listDecisions } from "../lib/store";
 
 export default defineTool({
   description:
-    "Answers backlog questions from a maintainer: what is waiting on them, grouped by reason, plus totals and component clusters. With an issue number it returns the stored Jev answers and actions for that issue. Use the GitHub tools for anything else.",
+    "Answers backlog questions from a maintainer: what is waiting on them, grouped by reason, plus totals and area clusters. With an issue number it returns the stored Jev answers and actions for that issue. Use the GitHub tools for anything else.",
   inputSchema: z.object({
     repo: z.string().optional().describe("owner/repo. Defaults to every enabled repository."),
     issueNumber: z.number().int().positive().optional(),

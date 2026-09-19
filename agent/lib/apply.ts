@@ -1,39 +1,27 @@
 import { createHash } from "node:crypto";
 
 import { isProduction, type RepoConfig } from "../config";
-import { addComment, addLabels, removeLabel, setIssueType } from "./github";
+import { addComment, addLabels, ensureLabel, removeLabel, setIssueType } from "./github";
+import type { ReproductionSettings } from "./issue-forms";
+import { labelStyle } from "./labels";
 import { MENTION_TEMPLATES, type TriagePlan } from "./plan";
 import { getLastAnnounced, isPreviewWriteAllowed, recordDecision, setLastAnnounced } from "./store";
 
 export const MAX_COMMENT_WORDS = 80;
 
-const MANAGED_LABELS = new Set([
-  "duplicate",
-  "answered",
-  "question",
-  "needs verification",
-  "needs reproduction",
-  "has pr",
-  "a11y",
-  "stale",
-]);
-
-/** Short templated request, built from the repo's `reproduction` config. */
-export function reproductionRequest(config: RepoConfig): string {
-  const { guide, templates } = config.reproduction;
+/** Short templated request, built from what the repo's issue form says about reproductions. */
+export function reproductionRequest(settings: ReproductionSettings): string {
+  const { guide, templates } = settings;
   const ask = `Would you be able to provide a ${guide ? `[reproduction](${guide})` : "reproduction"}? 🙏`;
   if (templates.length === 0) return `${ask} Please keep it as minimal as possible.`;
-  const links = templates.map((template) => `[${template.name}](${template.url})`).join(" or ");
-  return `${ask} You can start from the ${links} template and keep it as minimal as possible.`;
+  const links = templates.map((template) => `[${template.name.replace(/^the\s+/i, "")}](${template.url})`);
+  const list = links.length > 1 ? `${links.slice(0, -1).join(", ")} or ${links.at(-1)}` : links[0];
+  return `${ask} You can start from ${list}, and keep it as minimal as possible.`;
 }
 
+/** The bot only ever applies its own labels. `closed-by-bot`, priorities and the rest belong to maintainers. */
 export function isAllowedLabel(config: RepoConfig, label: string): boolean {
-  return (
-    MANAGED_LABELS.has(label) ||
-    label === config.nextMajor?.label ||
-    label.startsWith("upstream/") ||
-    label.startsWith("component: ")
-  );
+  return labelStyle(config, label) !== null;
 }
 
 export function countWords(text: string): number {
@@ -49,14 +37,14 @@ export function mentionLine(config: RepoConfig, plan: TriagePlan): string {
   return `cc ${handles}: ${reasons.join(" ")}`;
 }
 
-export function buildComment(config: RepoConfig, plan: TriagePlan, written: string): string {
+export function buildComment(config: RepoConfig, plan: TriagePlan, written: string, reproduction: ReproductionSettings): string {
   const parts: string[] = [];
   if (plan.security) {
     // Fixed wording. Nothing the model writes is posted next to a disclosed vulnerability.
     const where = config.securityPolicy ? `following our [security policy](${config.securityPolicy})` : "through the repository's security policy";
     parts.push(`Thanks for the report. Please report security issues privately ${where} rather than in a public issue.`);
   } else if (written.trim()) parts.push(written.trim());
-  if (plan.facts.includes("REPRODUCTION_REQUEST")) parts.push(reproductionRequest(config));
+  if (plan.facts.includes("REPRODUCTION_REQUEST")) parts.push(reproductionRequest(reproduction));
   const mention = mentionLine(config, plan);
   if (mention) parts.push(mention);
   return parts.join("\n\n");
@@ -80,13 +68,14 @@ export async function applyPlan(
   written: string,
   humanLabels: ReadonlySet<string>,
   currentLabels: readonly string[],
+  reproduction: ReproductionSettings,
 ): Promise<AppliedActions> {
   const addedLabels = plan.addLabels.filter((label) => isAllowedLabel(config, label) && !currentLabels.includes(label));
   const removable = plan.removeLabels.filter((label) => currentLabels.includes(label));
   // `triage` comes from the issue template, so it counts as applied by the reporter. It is the one label the bot owns.
   const removedLabels = removable.filter((label) => label === "triage" || !humanLabels.has(label));
   const keptHumanLabels = removable.filter((label) => !removedLabels.includes(label));
-  const comment = plan.escalate ? "" : buildComment(config, plan, written);
+  const comment = plan.escalate ? "" : buildComment(config, plan, written, reproduction);
 
   const actions: AppliedActions = {
     dryRun: plan.dryRun,
@@ -116,6 +105,11 @@ export async function applyPlan(
   const write = !plan.dryRun && actions.blocked === null;
   if (write) {
     if (actions.setType) await setIssueType(plan.issue, actions.setType);
+    // Labels are created on first use, with their color and description. An existing label is never edited.
+    for (const label of actions.addedLabels) {
+      const style = labelStyle(config, label);
+      if (style) await ensureLabel(plan.issue, label, style.color, style.description).catch(() => undefined);
+    }
     await addLabels(plan.issue, actions.addedLabels);
     for (const label of actions.removedLabels) await removeLabel(plan.issue, label);
     if (actions.comment) {

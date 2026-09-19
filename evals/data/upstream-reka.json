@@ -1,21 +1,49 @@
 {
   "config": {
     "dryRun": true,
-    "maintainers": ["maintainer"],
-    "upstreams": ["unovue/reka-ui", "tailwindlabs/tailwindcss"],
-    "package": { "name": "@acme/ui", "componentPrefix": "U" },
-    "nextMajor": { "label": "v5" },
-    "reproduction": { "blank": ["acme-ui-starter"] },
-    "securityPolicy": "https://example.com/SECURITY.md"
+    "maintainers": [
+      "maintainer"
+    ],
+    "upstreams": [
+      "unovue/reka-ui",
+      "tailwindlabs/tailwindcss"
+    ],
+    "package": {
+      "name": "@acme/ui"
+    },
+    "nextMajor": {
+      "label": "v5"
+    },
+    "reproduction": {
+      "blank": [
+        "acme-ui-starter"
+      ]
+    },
+    "securityPolicy": "https://example.com/SECURITY.md",
+    "areas": [
+      {
+        "kind": "component",
+        "names": [
+          "Button",
+          "Select",
+          "SelectMenu",
+          "Modal",
+          "Table",
+          "Input",
+          "Tooltip"
+        ]
+      }
+    ]
   },
-  "components": ["Button", "Select", "SelectMenu", "Modal", "Table", "Input", "Tooltip"],
   "latestVersion": "1.4.0",
   "issue": {
     "title": "Uncaught TypeError when USelectMenu is teleported into a detached container",
     "body": "### Environment\n\n- @acme/ui: 1.4.0\n- Vue: 3.5.13\n\n### Description\n\nWhen the parent of a `USelectMenu` gets removed from the DOM right as the menu opens (e.g. a route change), I get a crash. The stack trace points entirely into reka-ui's positioning code, `USelectMenu` just re-exports it:\n\n```\nUncaught TypeError: Cannot read properties of null (reading 'getBoundingClientRect')\n    at updatePosition (node_modules/reka-ui/dist/Popper/PopperContent.js:41:19)\n    at node_modules/reka-ui/dist/Popper/PopperContent.js:12:5\n    at flushCallbacks (node_modules/@vue/runtime-core/dist/runtime-core.cjs.js:311:7)\n```\n\nI can reproduce this with plain reka-ui too, outside of @acme/ui entirely, by unmounting the trigger's parent while the popper is positioning.\n\n### Expected behavior\n\nThe positioning logic should bail out instead of throwing when its reference element is gone.",
     "author": "felixq",
     "authorAssociation": "NONE",
-    "labels": ["triage"],
+    "labels": [
+      "triage"
+    ],
     "type": null,
     "createdAt": "2026-08-18T12:00:00Z",
     "comments": []

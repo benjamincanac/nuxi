@@ -1,21 +1,49 @@
 {
   "config": {
     "dryRun": true,
-    "maintainers": ["maintainer"],
-    "upstreams": ["unovue/reka-ui", "tailwindlabs/tailwindcss"],
-    "package": { "name": "@acme/ui", "componentPrefix": "U" },
-    "nextMajor": { "label": "v5" },
-    "reproduction": { "blank": ["acme-ui-starter"] },
-    "securityPolicy": "https://example.com/SECURITY.md"
+    "maintainers": [
+      "maintainer"
+    ],
+    "upstreams": [
+      "unovue/reka-ui",
+      "tailwindlabs/tailwindcss"
+    ],
+    "package": {
+      "name": "@acme/ui"
+    },
+    "nextMajor": {
+      "label": "v5"
+    },
+    "reproduction": {
+      "blank": [
+        "acme-ui-starter"
+      ]
+    },
+    "securityPolicy": "https://example.com/SECURITY.md",
+    "areas": [
+      {
+        "kind": "component",
+        "names": [
+          "Button",
+          "Select",
+          "SelectMenu",
+          "Modal",
+          "Table",
+          "Input",
+          "Tooltip"
+        ]
+      }
+    ]
   },
-  "components": ["Button", "Select", "SelectMenu", "Modal", "Table", "Input", "Tooltip"],
   "latestVersion": "1.4.0",
   "issue": {
     "title": "this is completely broken again!!!",
     "body": "seriously how many releases in a row is this going to be broken. nothing works. i've wasted my whole day on this garbage. fix your library.",
     "author": "angryuser99",
     "authorAssociation": "NONE",
-    "labels": ["triage"],
+    "labels": [
+      "triage"
+    ],
     "type": null,
     "createdAt": "2026-08-17T22:40:00Z",
     "comments": []

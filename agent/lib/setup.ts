@@ -6,7 +6,12 @@ import { gh, ghText, GitHubRequestError, type RepoRef } from "./github";
 
 export const SETUP_BRANCH = "nuxi/setup";
 
-const COMPONENT_GLOBS = ["src/runtime/components/*.vue", "src/components/*.vue", "src/components/*.tsx", "components/*.vue"];
+/**
+ * Only a layout fact is proposed as areas: a monorepo's packages. What else counts as an area depends
+ * on what the project is, a components directory means one thing in a UI library and nothing in an app,
+ * so the maintainer declares those.
+ */
+const AREA_CANDIDATES = [{ kind: "package", glob: "packages/*" }];
 
 /** Labels the bot owns. A stale workflow that only targets these is fully replaced. */
 const OWNED_LABELS = new Set(["triage", "needs reproduction", "needs verification", "stale"]);
@@ -72,7 +77,12 @@ async function detectMaintainers(ref: RepoRef, tree: Set<string>, owner: z.outpu
 }
 
 async function resolveUpstream(name: string, dependencies: string[], signal?: AbortSignal): Promise<string | null> {
-  const dependency = dependencies.find((candidate) => candidate === name || candidate.endsWith(`/${name}`) || candidate.startsWith(`@${name}/`));
+  // Most specific rule first: `nuxt` must resolve to the `nuxt` package, not to `@nuxt/eslint`.
+  const dependency =
+    dependencies.find((candidate) => candidate === name) ??
+    dependencies.find((candidate) => candidate.endsWith(`/${name}`)) ??
+    dependencies.find((candidate) => candidate === `@${name}/core`) ??
+    dependencies.find((candidate) => candidate.startsWith(`@${name}/`));
   if (!dependency) return null;
   const response = await fetch(`https://registry.npmjs.org/${dependency.replace("/", "%2F")}/latest`, { signal }).catch(() => null);
   if (!response?.ok) return null;
@@ -80,23 +90,6 @@ async function resolveUpstream(name: string, dependencies: string[], signal?: Ab
   if (!parsed.success) return null;
   const url = typeof parsed.data.repository === "string" ? parsed.data.repository : parsed.data.repository?.url;
   return /github\.com[/:]([\w.-]+\/[\w.-]+?)(?:\.git)?(?:#.*)?$/.exec(url ?? "")?.[1] ?? null;
-}
-
-function detectReproduction(template: string | null): NonNullable<RepoConfigInput["reproduction"]> {
-  if (!template) return {};
-  const links = [...template.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)|(?:\*\*([^*]+)\*\*:\s*)(https?:\/\/\S+)/g)].map((match) => ({
-    name: (match[1] ?? match[3] ?? "").trim(),
-    url: match[2] ?? match[4] ?? "",
-  }));
-  const isSandbox = (url: string) => /codesandbox\.io|stackblitz\.com/.test(url);
-  const guide = links.find((link) => !isSandbox(link.url) && /reproduc/i.test(`${link.name} ${link.url}`))?.url;
-  const templates = links.filter((link) => isSandbox(link.url)).slice(0, 3);
-  return {
-    ...(guide ? { guide } : {}),
-    ...(templates.length ? { templates } : {}),
-    // The last path segment of a sandbox link identifies the unmodified starter.
-    ...(templates.length ? { blank: templates.map((link) => new URL(link.url).pathname.split("/").filter(Boolean).pop() ?? "").filter(Boolean) } : {}),
-  };
 }
 
 function listOption(source: string, key: string): string[] {
@@ -157,11 +150,20 @@ export async function proposeSetup(ref: RepoRef, signal?: AbortSignal): Promise<
     notes.push("`maintainers` could not be detected. Replace the placeholder with the people to mention.");
   }
 
-  const glob = COMPONENT_GLOBS.find((candidate) => {
-    const [directory = "", extension = ""] = candidate.split("*");
-    return [...paths].some((path) => path.startsWith(directory) && path.endsWith(extension) && !path.slice(directory.length).includes("/"));
-  });
-  if (glob) config.components = glob;
+  const matches = (glob: string) => {
+    const [directory = "", extension = ""] = glob.split("*");
+    const names = new Set<string>();
+    for (const path of paths) {
+      if (!path.startsWith(directory)) continue;
+      const [first = "", ...rest] = path.slice(directory.length).split("/");
+      // A file pattern matches files of that directory. A bare `dir/*` matches its sub-directories.
+      if (extension ? rest.length === 0 && first.endsWith(extension) : rest.length > 0) names.add(first);
+    }
+    return names.size;
+  };
+  const areas = AREA_CANDIDATES.filter((candidate) => matches(candidate.glob) >= 2);
+  // No label template is proposed: a label per area is opt-in.
+  if (areas.length) config.areas = areas;
 
   const packageSource = paths.has("package.json") ? await ghText(`${repoPath(ref)}/contents/package.json`, options) : null;
   const parsedPackage = packageSource ? packageJsonSchema.safeParse(JSON.parse(packageSource)) : null;
@@ -187,8 +189,8 @@ export async function proposeSetup(ref: RepoRef, signal?: AbortSignal): Promise<
   }
 
   const reproduireTemplate = [...paths].find((path) => path.startsWith(".github/reproduire/") && path.endsWith(".md"));
-  const reproduction = detectReproduction(reproduireTemplate ? await ghText(`${repoPath(ref)}/contents/${reproduireTemplate}`, options) : null);
-  if (Object.keys(reproduction).length) config.reproduction = reproduction;
+  const hasForm = [...paths].some((path) => /^\.github\/ISSUE_TEMPLATE\/[^/]+\.ya?ml$/.test(path) && !path.endsWith("/config.yml"));
+  if (!hasForm) notes.push("No issue form was found. nuxi reads the reproduction guide and starter links from the form's reproduction field. Without one, set `reproduction` in this file.");
 
   const securityPath = ["SECURITY.md", ".github/SECURITY.md", "docs/SECURITY.md"].find((path) => paths.has(path));
   if (securityPath) config.securityPolicy = `https://github.com/${ref.owner}/${ref.repo}/blob/${repo.default_branch}/${securityPath}`;
@@ -232,7 +234,7 @@ export function setupPullRequestBody(proposal: SetupProposal, manual: WorkflowFi
     lines.push("", "### To remove by hand", "", "The app has no permission to edit workflow files here, so these were left in place.", "", "| File | Why |", "| --- | --- |", ...manual.map((finding) => `| \`${finding.path}\` | ${finding.reason} |`));
   }
   if (kept.length) lines.push("", "### Kept", "", "| File | Note |", "| --- | --- |", ...kept.map((finding) => `| \`${finding.path}\` | ${finding.reason} |`));
-  lines.push("", `Labels are not created by this PR. Run \`pnpm labels ${proposal.slug}\` from the nuxi repository after merging.`);
+  lines.push("", "There is no label to create. nuxi creates each of its labels the first time it applies it.");
   return lines.join("\n");
 }
 

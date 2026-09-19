@@ -2,12 +2,12 @@ import { z } from "zod";
 
 import type { RepoConfig } from "../../config";
 import type { ReproductionCheck, TriageContext } from "../context";
+import { sectionOf, type ReproductionSettings } from "../issue-forms";
 import { ghText } from "../github";
 import type { PlanPatch } from "../plan";
 import { markOnce } from "../store";
 
-const LINK_PATTERN =
-  /https?:\/\/(?:www\.)?(stackblitz\.com|codesandbox\.io|github\.com)\/[^\s)>\]"'`]+/gi;
+const LINK_PATTERN = /https?:\/\/[^\s)>\]"'`]+/gi;
 
 export interface ReproductionLink {
   url: string;
@@ -26,7 +26,7 @@ function contextRepositories(config: RepoConfig): Set<string> {
   return new Set([`${config.owner}/${config.repo}`, ...config.upstreams].map((slug) => slug.toLowerCase()));
 }
 
-export function extractReproductionLinks(text: string, config: RepoConfig): ReproductionLink[] {
+export function extractReproductionLinks(text: string, config: RepoConfig, settings: ReproductionSettings): ReproductionLink[] {
   const ignored = contextRepositories(config);
   const links: ReproductionLink[] = [];
   for (const match of text.matchAll(LINK_PATTERN)) {
@@ -38,7 +38,10 @@ export function extractReproductionLinks(text: string, config: RepoConfig): Repr
       links.push({ url: url.href, kind: "stackblitz", repository });
     } else if (host === "codesandbox.io") {
       links.push({ url: url.href, kind: "codesandbox", repository: null });
-    } else {
+    } else if (settings.hosts.includes(host)) {
+      // A host the repo's issue form points reporters to, such as its own playground.
+      links.push({ url: url.href, kind: "playground", repository: null });
+    } else if (host === "github.com") {
       const repository = parseRepository(segments);
       const reserved = ["issues", "pull", "blob", "commit", "discussions", "releases"];
       // Links to issues or to files are context, not reproductions.
@@ -64,14 +67,19 @@ async function resolves(url: string, signal?: AbortSignal): Promise<boolean> {
   }
 }
 
-export async function inspectLink(link: ReproductionLink, config: RepoConfig, signal?: AbortSignal): Promise<ReproductionCheck> {
-  const blank = config.reproduction.blank.map((entry) => entry.toLowerCase());
+export async function inspectLink(link: ReproductionLink, config: RepoConfig, settings: ReproductionSettings, signal?: AbortSignal): Promise<ReproductionCheck> {
+  const blank = settings.blank.map((entry) => entry.toLowerCase());
+  const bare = link.url.toLowerCase().replace(/[#?].*$/, "").replace(/\/+$/, "");
   const base: ReproductionCheck = {
     url: link.url,
     kind: link.kind,
     resolves: false,
     usesPackage: null,
-    blankTemplate: blank.some((entry) => link.url.toLowerCase().includes(entry)),
+    // A sandbox starter is recognized by its id. A playground is blank when the link carries no state.
+    blankTemplate:
+      link.kind === "playground"
+        ? link.url.toLowerCase().replace(/\/+$/, "") === bare && blank.some((entry) => entry.replace(/\/+$/, "") === bare)
+        : blank.some((entry) => link.url.toLowerCase().includes(entry)),
     version: null,
     repository: link.repository,
   };
@@ -123,15 +131,18 @@ export interface ReproductionOutcome {
 }
 
 export async function validateReproduction(context: TriageContext, signal?: AbortSignal): Promise<ReproductionOutcome> {
-  const { config, issue, fixture } = context;
-  const text = [issue.body, ...issue.comments.filter((c) => c.author === issue.author).map((c) => c.body)].join("\n");
+  const { config, issue, fixture, reproduction: settings } = context;
+  // The form field comes first. Reporters also paste links in the description or in later comments.
+  const field = sectionOf(issue.body, settings.reproductionHeading) ?? "";
+  const reported = sectionOf(issue.body, settings.versionHeading)?.match(/\d+\.\d+\.\d+(?:-[\w.]+)?/)?.[0] ?? null;
+  const text = [field, issue.body, ...issue.comments.filter((c) => c.author === issue.author).map((c) => c.body)].join("\n");
 
   const latestVersion = fixture?.latestVersion ?? (config.package ? await latestPackageVersion(config.package.name, signal) : null);
   const checks = fixture
     ? fixture.reproduction
       ? [fixture.reproduction]
       : []
-    : await Promise.all(extractReproductionLinks(text, config).slice(0, 3).map((link) => inspectLink(link, config, signal)));
+    : await Promise.all(extractReproductionLinks(text, config, settings).slice(0, 3).map((link) => inspectLink(link, config, settings, signal)));
 
   const usable = checks.filter((check) => check.resolves && !check.blankTemplate && check.usesPackage !== false);
   const valid = usable[0] ?? null;
@@ -148,12 +159,13 @@ export async function validateReproduction(context: TriageContext, signal?: Abor
     patch.addLabels = issue.labels.includes("needs reproduction") ? [] : ["needs reproduction"];
     patch.removeLabels = ["triage"];
     patch.facts = [`The reproduction is not usable: ${reasons.join("; ")}.`, "REPRODUCTION_REQUEST"];
-  } else if (valid?.version && latestVersion && isBehind(valid.version, latestVersion)) {
+  } else if (valid && latestVersion && isBehind(valid.version ?? reported ?? latestVersion, latestVersion)) {
+    const version = valid.version ?? reported;
     // Asked once. The sweep would otherwise repeat it on every run.
     const first = fixture || config.dryRun ? true : await markOnce(issue, "retest-on-latest");
     if (first) {
       patch.facts = [
-        `The reproduction uses ${config.package?.name} ${valid.version}, the latest is ${latestVersion}. Ask the reporter to retest on the latest version first.`,
+        `The ${valid.version ? "reproduction uses" : "report is on"} ${config.package?.name} ${version}, the latest is ${latestVersion}. Ask the reporter to retest on the latest version first.`,
       ];
     }
   }

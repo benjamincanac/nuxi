@@ -1,8 +1,8 @@
-import { componentLabel, isEnabled, upstreamLabel } from "../../config";
+import { isEnabled, upstreamLabel } from "../../config";
 import {
   classifyQuestions,
-  componentQuestionId,
-  componentQuestions,
+  areaQuestionId,
+  areaQuestions,
   upstreamQuestion,
 } from "../jev/questions";
 import type { TriageContext } from "../context";
@@ -41,14 +41,14 @@ export function issueState(context: TriageContext, sandboxResult?: SandboxResult
 }
 
 export async function classify(context: TriageContext, signal?: AbortSignal): Promise<ClassifyOutcome> {
-  const { config, issue, components } = context;
+  const { config, issue, areas } = context;
   const t = config.thresholds;
 
   const answers = await ask(
     {
       ...classifyQuestions,
       upstream: upstreamQuestion(config.upstreams),
-      ...componentQuestions(components, config.package?.componentPrefix),
+      ...areaQuestions(areas),
     },
     issueState(context),
     signal,
@@ -111,7 +111,7 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
     if (resolved) {
       if (!has("answered")) {
         labels.push("answered");
-        mentions.push({ template: "close_answered", detail: `The thread looks resolved.${summary}` });
+        mentions.push({ template: "close_answered", detail: summary.trim() });
       }
       decided = true;
     }
@@ -133,10 +133,11 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
       }
     }
 
-    if (!resolved && !waitsForReproduction) {
-      if (isEnabled(config, "fixed") && type === "Bug" && !has("needs verification")) next.push("check_fixed_in_release");
-      if (isEnabled(config, "duplicate") && !has("duplicate")) next.push("check_duplicate");
+    if (!resolved && !waitsForReproduction && isEnabled(config, "fixed") && type === "Bug" && !has("needs verification")) {
+      next.push("check_fixed_in_release");
     }
+    // Still checked without a reproduction: a confident duplicate replaces the request, see `supersedesReproduction`.
+    if (!resolved && isEnabled(config, "duplicate") && !has("duplicate")) next.push("check_duplicate");
 
     if (!resolved && !waitsForReproduction && isEnabled(config, "breaking") && config.nextMajor && answers.needs_breaking_change.probability >= t.labels) {
       labels.push(config.nextMajor.label);
@@ -146,11 +147,15 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
 
   if (isEnabled(config, "a11y") && answers.is_a11y.probability >= t.labels) labels.push("a11y");
 
-  if (isEnabled(config, "component")) {
+  if (isEnabled(config, "area")) {
     const byId = answers as Record<string, { type: string; probability?: number }>;
-    for (const name of components) {
-      const probability = byId[componentQuestionId(name)]?.probability ?? 0;
-      if (probability >= t.labels) labels.push(componentLabel(name));
+    const found: string[] = [];
+    patch.areas = found;
+    for (const area of areas) {
+      const probability = byId[areaQuestionId(area)]?.probability ?? 0;
+      if (probability < t.labels) continue;
+      found.push(area.slug);
+      if (area.label) labels.push(area.label);
     }
   }
 

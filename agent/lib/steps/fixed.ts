@@ -8,7 +8,7 @@ import { issueState } from "./classify";
 
 const MAX_CANDIDATES = 8;
 
-/** `* **SelectMenu:** description ([#123](...))`. A scope can list several components separated by `/`. */
+/** `* **SelectMenu:** description ([#123](...))`. A scope can list several areas separated by `/`. */
 const CHANGELOG_ENTRY = /^[*-]\s+\*\*([^:*]+):\*\*\s+(.+)$/;
 
 export function changelogEntries(release: Release): { scopes: string[]; text: string; pr: number | null }[] {
@@ -26,13 +26,17 @@ export function changelogEntries(release: Release): { scopes: string[]; text: st
   return entries;
 }
 
+function referencingSummary(title: string, release: string | null): string {
+  return `Merged pull request that references this issue${release ? `, released in ${release}` : ", not released yet"}: ${title}`;
+}
+
 function releaseContaining(releases: Release[], pr: number): string | null {
   const found = releases.find((release) => (release.body ?? "").includes(`#${pr}]`) || (release.body ?? "").includes(`#${pr})`));
   return found?.tag_name ?? null;
 }
 
-/** Deterministic pass: merged PRs referencing the issue, plus changelog entries scoped to its components. */
-export async function findFixedCandidates(context: TriageContext, componentLabels: string[], signal?: AbortSignal): Promise<FixedCandidate[]> {
+/** Deterministic pass: merged PRs referencing the issue, plus changelog entries whose scope is one of its areas. */
+export async function findFixedCandidates(context: TriageContext, areaSlugs: string[], signal?: AbortSignal): Promise<FixedCandidate[]> {
   const { issue } = context;
   if (context.fixture) return context.fixture.fixedCandidates;
 
@@ -51,7 +55,7 @@ export async function findFixedCandidates(context: TriageContext, componentLabel
     if (event.event !== "cross-referenced" || !source || !mergedAt || Date.parse(mergedAt) < created) continue;
     candidates.set(`#${source.number}`, {
       id: `#${source.number}`,
-      summary: `Merged pull request: ${source.title}`,
+      summary: referencingSummary(source.title, releaseContaining(releases, source.number)),
       url: source.html_url,
       release: releaseContaining(releases, source.number),
     });
@@ -62,13 +66,13 @@ export async function findFixedCandidates(context: TriageContext, componentLabel
     if (!reference.test(pr.body ?? "") || candidates.has(`#${pr.number}`)) continue;
     candidates.set(`#${pr.number}`, {
       id: `#${pr.number}`,
-      summary: `Merged pull request: ${pr.title}`,
+      summary: referencingSummary(pr.title, releaseContaining(releases, pr.number)),
       url: pr.html_url,
       release: releaseContaining(releases, pr.number),
     });
   }
 
-  const scopes = componentLabels.map((label) => label.replace(/^component:\s*/, ""));
+  const scopes = areaSlugs;
   for (const release of releases) {
     for (const entry of changelogEntries(release)) {
       if (!entry.scopes.some((scope) => scopes.includes(scope))) continue;
@@ -86,6 +90,12 @@ export async function findFixedCandidates(context: TriageContext, componentLabel
   return [...candidates.values()].slice(0, MAX_CANDIDATES);
 }
 
+/** Areas found in this run, plus the ones already labeled on the issue. */
+export function knownAreas(context: TriageContext, planned: readonly string[]): string[] {
+  const labeled = context.areas.filter((area) => area.label !== null && context.issue.labels.includes(area.label)).map((area) => area.slug);
+  return [...new Set([...planned, ...labeled])];
+}
+
 export interface FixedOutcome {
   answers: unknown;
   candidates: FixedCandidate[];
@@ -95,12 +105,12 @@ export interface FixedOutcome {
 
 export async function checkFixedInRelease(
   context: TriageContext,
-  componentLabels: string[],
+  areaSlugs: string[],
   sandbox: SandboxResult | null,
   signal?: AbortSignal,
 ): Promise<FixedOutcome> {
   const { config, issue } = context;
-  const candidates = await findFixedCandidates(context, componentLabels, signal);
+  const candidates = await findFixedCandidates(context, areaSlugs, signal);
   const sandboxFixed = sandbox?.outcome === "no_longer_reproduces";
 
   if (candidates.length === 0 && !sandboxFixed) {
@@ -108,7 +118,11 @@ export async function checkFixedInRelease(
   }
 
   const answers = candidates.length
-    ? await ask(fixedQuestions(candidates), issueState(context, sandbox), signal)
+    ? await ask(
+        fixedQuestions(candidates),
+        { issue: issueState(context, sandbox), candidates: candidates.map(({ id, summary, release }) => ({ id, summary, release })) },
+        signal,
+      )
     : null;
   const fixedBy = answers ? (candidates.find((candidate) => candidate.id === answers.fixed_by.choice) ?? null) : null;
   const judged = answers !== null && fixedBy !== null && answers.is_fixed.probability >= config.thresholds.is_fixed;

@@ -1,21 +1,49 @@
 {
   "config": {
     "dryRun": true,
-    "maintainers": ["maintainer"],
-    "upstreams": ["unovue/reka-ui", "tailwindlabs/tailwindcss"],
-    "package": { "name": "@acme/ui", "componentPrefix": "U" },
-    "nextMajor": { "label": "v5" },
-    "reproduction": { "blank": ["acme-ui-starter"] },
-    "securityPolicy": "https://example.com/SECURITY.md"
+    "maintainers": [
+      "maintainer"
+    ],
+    "upstreams": [
+      "unovue/reka-ui",
+      "tailwindlabs/tailwindcss"
+    ],
+    "package": {
+      "name": "@acme/ui"
+    },
+    "nextMajor": {
+      "label": "v5"
+    },
+    "reproduction": {
+      "blank": [
+        "acme-ui-starter"
+      ]
+    },
+    "securityPolicy": "https://example.com/SECURITY.md",
+    "areas": [
+      {
+        "kind": "component",
+        "names": [
+          "Button",
+          "Select",
+          "SelectMenu",
+          "Modal",
+          "Table",
+          "Input",
+          "Tooltip"
+        ]
+      }
+    ]
   },
-  "components": ["Button", "Select", "SelectMenu", "Modal", "Table", "Input", "Tooltip"],
   "latestVersion": "1.4.0",
   "issue": {
     "title": "UTable sort icon doesn't rotate when clicking a column header",
     "body": "### Environment\n\n- @acme/ui: 1.4.0\n- Vue: 3.5.13\n\n### Description\n\nClicking a sortable column header on `UTable` sorts the rows correctly, but the little chevron icon next to the header label never rotates to show ascending vs descending. It stays pointing down no matter the sort direction.\n\n### Expected behavior\n\nThe icon should flip depending on sort direction, like it used to in 1.2.x.",
     "author": "devonhall",
     "authorAssociation": "NONE",
-    "labels": ["triage"],
+    "labels": [
+      "triage"
+    ],
     "type": null,
     "createdAt": "2026-08-14T16:30:00Z",
     "comments": []

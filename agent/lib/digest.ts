@@ -15,7 +15,7 @@ export interface Digest {
   repo: string;
   awaiting: { reason: string; issues: Link[] }[];
   duplicatesDetected: number;
-  componentClusters: { label: string; count: number }[];
+  areaClusters: { label: string; count: number }[];
   topEnhancements: (Link & { thumbsUp: number })[];
   sandbox: Record<string, number>;
   totals: { triage: number; resolvedThisWeek: number };
@@ -45,11 +45,16 @@ export async function buildDigest(config: RepoConfig, signal?: AbortSignal): Pro
     ]);
 
   const recent = decisions.filter((decision) => decision.repo.toLowerCase() === repo.toLowerCase() && Date.parse(decision.at) > Date.now() - WEEK_MS);
+  // Latest classification per open issue. Areas come from the decision log, so no label is required.
+  const openNumbers = new Set(open.map((issue) => issue.issueNumber));
+  const latest = new Map<number, string[]>();
+  for (const decision of decisions) {
+    if (decision.step !== "classify" || decision.repo.toLowerCase() !== repo.toLowerCase() || !openNumbers.has(decision.issueNumber)) continue;
+    latest.set(decision.issueNumber, (decision.actions as { areas?: string[] } | null)?.areas ?? []);
+  }
   const clusters = new Map<string, number>();
-  for (const issue of open) {
-    for (const label of issue.labels) {
-      if (label.startsWith("component: ")) clusters.set(label, (clusters.get(label) ?? 0) + 1);
-    }
+  for (const areas of latest.values()) {
+    for (const area of areas) clusters.set(area, (clusters.get(area) ?? 0) + 1);
   }
 
   const sandbox: Record<string, number> = {};
@@ -72,7 +77,7 @@ export async function buildDigest(config: RepoConfig, signal?: AbortSignal): Pro
       },
     ].filter((group) => group.issues.length > 0),
     duplicatesDetected: recent.filter((decision) => decision.step === "duplicate" && JSON.stringify(decision.actions).includes("close_duplicate")).length,
-    componentClusters: [...clusters].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count).slice(0, 8),
+    areaClusters: [...clusters].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count).slice(0, 8),
     topEnhancements: enhancements.map((item) => ({ number: item.number, title: item.title, url: item.html_url, thumbsUp: item.reactions?.["+1"] ?? 0 })),
     sandbox,
     totals: { triage, resolvedThisWeek: resolved },
@@ -88,8 +93,8 @@ function links(items: Link[], max = 10): string {
 /** Discord embeds for the weekly digest. One message per repo. */
 export function digestEmbeds(digest: Digest): Record<string, unknown>[] {
   const fields = digest.awaiting.map((group) => ({ name: `${group.reason} (${group.issues.length})`, value: links(group.issues) }));
-  if (digest.componentClusters.length) {
-    fields.push({ name: "Top clusters", value: digest.componentClusters.map((cluster) => `\`${cluster.label}\` ${cluster.count}`).join("\n") });
+  if (digest.areaClusters.length) {
+    fields.push({ name: "Top clusters", value: digest.areaClusters.map((cluster) => `\`${cluster.label}\` ${cluster.count}`).join("\n") });
   }
   const sandbox = Object.entries(digest.sandbox);
   if (sandbox.length) fields.push({ name: "Sandbox runs", value: sandbox.map(([outcome, count]) => `${outcome}: ${count}`).join("\n") });

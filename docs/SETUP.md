@@ -1,272 +1,245 @@
 # Deploy and set up nuxi
 
-From an empty Vercel account to a bot that triages a playground repository, then a real one. Count about an hour. Every step says how to check it worked before moving on.
+Everything is done from the terminal, inside a clone of this repository.
 
 You need:
 
-- Node 24 and pnpm
-- The Vercel CLI, 56.4 or later: `pnpm add -g vercel`
-- A Vercel team on the Pro plan. `dispatch_queue` runs every minute and Hobby only allows daily cron jobs.
-- A GitHub account where you can create and install a GitHub App
-- A Discord server where you can add a bot
+- Node 24 and pnpm.
+- The [Vercel CLI](https://vercel.com/docs/cli), logged in: `pnpm add -g vercel`, then `vercel login`.
+- The [GitHub CLI](https://cli.github.com), logged in: `gh auth login`. The local scripts use its token.
+- A Vercel team on the Pro plan, with Vercel Sandbox available. One schedule runs every minute, which Hobby rejects at deploy time, and the build prewarms a sandbox.
+- A GitHub account where you can create a GitHub App and a repository.
+- A Discord server where you can add a bot and create channels.
 
-## 1. Link the project
+## 1. Create the project
 
 ```sh
-git clone https://github.com/benjamincanac/nuxi.git
-cd nuxi
+git clone https://github.com/benjamincanac/nuxi.git && cd nuxi
 pnpm install
+
+# Asks for a team and a project. Creates the project when it does not exist.
 vercel link
+
+# Writes .env.local with VERCEL_OIDC_TOKEN, which authenticates AI Gateway and Connect locally.
+# Works before anything is deployed: the token is issued to the project.
+# It expires after 12 hours. Pull again when local calls return 401.
 vercel env pull
+
+# Check
+pnpm typecheck && pnpm build
 ```
-
-`vercel env pull` writes `.env.local` with a `VERCEL_OIDC_TOKEN`. That token authenticates both AI Gateway and Vercel Connect from your machine, so there is no API key to create. It expires after 12 hours, run `vercel env pull` again when calls start failing with 401.
-
-Check: `pnpm typecheck` and `pnpm build` pass.
 
 ## 2. Run the evals
 
-This is the first time Jev and the models actually run, so do it before anything touches GitHub.
-
 ```sh
+# First real run of Jev and the models. The fixtures never call GitHub.
+# `passed` and `scored` are both fine. `scored` means every gate passed and the judge
+# disliked the wording of a summary, which varies between runs.
 pnpm eval
+
+# A single one
+pnpm eval triage/duplicate
 ```
 
-The 13 fixtures in `evals/data` never call GitHub. If `typesafe-ai/jev` is not available on your gateway, set `JEV_MODEL` to another evaluation model and note that thresholds were chosen for Jev.
-
-Check: evals report `passed` or `scored`. A `failed` eval prints the tool calls it expected.
-
-## 3. Add Redis
-
-In the Vercel dashboard, open the project, then Storage, then add Upstash for Redis from the Marketplace and connect it to all environments. It injects `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
+## 3. Add Redis and the secret
 
 ```sh
-vercel env pull
+# Pick Redis when asked. It holds the event queue, the decision log and the once-only markers.
+vercel integration add upstash -e production -e preview
+
+# Protects the /ops routes. Keep the value, the curl calls below need it.
+openssl rand -hex 32 | vercel env add INTERNAL_API_SECRET production,preview
+
+# Check: KV_REST_API_URL, KV_REST_API_TOKEN and INTERNAL_API_SECRET, for Preview and Production.
+# None of them is a Development variable, so `vercel env pull` fetches nothing new.
+# Local runs use an in-memory store on purpose.
+vercel env ls
 ```
 
-Redis holds the event queue, the decision log with raw Jev answers, the once-only markers for follow-ups, and the upstream issue pairs. Without it the agent falls back to memory, which is fine locally and useless on Vercel.
-
-## 4. Set the secrets
+## 4. Create the playground
 
 ```sh
-openssl rand -hex 32 | vercel env add INTERNAL_API_SECRET production
-openssl rand -hex 32 | vercel env add INTERNAL_API_SECRET preview
+gh repo create nuxi-playground --public
+gh repo clone <you>/nuxi-playground /tmp/nuxi-playground
+
+# nuxi ignores a repository without .github/nuxi.yml.
+# Change `maintainers` in the file if you are not benjamincanac.
+mkdir -p /tmp/nuxi-playground/.github
+cp examples/playground.nuxi.yml /tmp/nuxi-playground/.github/nuxi.yml
+git -C /tmp/nuxi-playground add .github/nuxi.yml
+git -C /tmp/nuxi-playground commit -m "chore: add nuxi config"
+git -C /tmp/nuxi-playground push -u origin HEAD
+
+# Copies issues with their comments and labels, neutralizes @-mentions, skips what is already there.
+# There is no label to create for nuxi, it creates its labels when it first applies them.
+pnpm seed --from nuxt/ui --to <you>/nuxi-playground --count 30
 ```
 
-Keep the preview value at hand, you will use it with `curl` below. Everything else in [`.env.example`](../.env.example) is optional at this point.
+## 5. Create the preview GitHub app
 
-## 5. Create the preview GitHub App
-
-Two apps keep tests away from production. Start with the preview one.
+Two GitHub apps keep tests away from production. Previews and local runs use this one, production uses the one from step 9.
 
 ```sh
+# Opens the browser on the connector form, see below.
 vercel connect create github --name nuxi-preview
-vercel connect attach github/nuxi-preview --environment preview --environment development
+
+# Which deployments may ask this connector for tokens.
+vercel connect attach github/nuxi-preview -e preview -e development
+
+# Check
+vercel connect list
 ```
 
-`create` opens the browser and creates the GitHub App for you through Connect. When it asks for permissions, the agent needs:
+In the form, keep **Managed**, pick your account as the namespace, and leave **Triggers** empty since previews never react to webhooks. Under **Permissions**, select **Deselect all**, then set:
 
-| Permission | Access |
-| --- | --- |
-| Issues | Read and write |
-| Pull requests | Read and write |
-| Contents | Read and write |
-| Workflows | Read and write |
-| Metadata | Read |
+| Permission | Level | Used for |
+| --- | --- | --- |
+| `issues` | write | Labels, the Issue Type, comments |
+| `pull_requests` | write | Reading linked pull requests, opening the setup pull request |
+| `contents` | write | Reading `.github/nuxi.yml` and issue forms, pushing the `nuxi/setup` branch |
+| `workflows` | write | Removing the workflows nuxi replaces, in the setup pull request |
+| `metadata` | read | Required by GitHub |
 
-Issues write is what triage uses. The other three write permissions exist for one thing, the setup pull request of step 12: Contents to push the `nuxi/setup` branch, Pull requests to open it, Workflows to delete the workflow files nuxi replaces. nuxi never pushes to a default branch. Without Workflows the PR still opens, with the config only, and its body lists the files to delete by hand. With Contents and Pull requests left on read, skip the automatic PR and commit the file yourself.
+GitHub then asks where to install the app. Pick **Only select repositories** and the playground.
 
-No trigger is attached to this connector. Previews never react to webhooks, they are driven through the ops route.
+Only `issues` write is used by triage. The rest is for the setup pull request of step 11. If you plan to write `.github/nuxi.yml` by hand, `pull_requests` and `contents` on read are enough and `workflows` is not needed.
 
-Then open the app from the Connect dashboard and install it on your personal account, limited to the playground repository from the next step.
-
-Check: `vercel connect list` shows `github/nuxi-preview` attached to the project.
-
-## 6. Prepare the playground
-
-Create an empty public repository, for example `<you>/nuxi-triage-playground`, and install the preview app on it. Then:
+## 6. Dry-run a real backlog
 
 ```sh
-# The config, with dryRun: false and components read from nuxt/ui
-mkdir -p /tmp/playground/.github
-cp examples/playground.nuxi.yml /tmp/playground/.github/nuxi.yml
-# edit `maintainers`, commit and push that file to the playground repository
-
-pnpm labels <you>/nuxi-triage-playground
-pnpm seed --from nuxt/ui --to <you>/nuxi-triage-playground --count 30
-```
-
-The scripts authenticate with `GITHUB_TOKEN`, or with `gh auth token` when it is not set. `seed` copies issues with their comments as quoted blocks, neutralizes every @-mention, and skips what it already copied when you run it again. Add `--dry-run` to either script to see what it would do.
-
-Check: the playground has 30 issues and the `component: *` labels.
-
-## 7. Dry-run the real backlog from your machine
-
-Nothing is deployed yet and nothing is written. This runs the pipeline locally, without the sandbox step, against the public `nuxt/ui` issues.
-
-```sh
+# Runs the pipeline on your machine against public issues. Writes nothing.
+# --config because nuxt/ui has no .github/nuxi.yml yet.
 pnpm backfill nuxt/ui --config examples/nuxt-ui.nuxi.yml --limit 20
+
+# One row per issue: proposed actions and the probabilities behind them.
+# This is what you read to tune `thresholds`.
+open backfill.csv
 ```
 
-Open `backfill.csv`. Each row has the proposed labels, mentions, facts, and the probabilities behind them. This is the file to read when tuning `thresholds`.
-
-## 8. Deploy a preview
+## 7. Test on a preview
 
 ```sh
+# Deploys your working tree as a preview. No commit, production untouched.
 vercel deploy
-```
+curl https://<preview-url>/eve/v1/health
 
-Use a preview first, not `pnpm run deploy`, which goes to production. Note the URL, then trigger one issue. Without `"write": true` the run is forced to dry-run:
-
-```sh
 export NUXI_URL=https://<preview-url>
-export INTERNAL_API_SECRET=<preview value>
+export INTERNAL_API_SECRET=<value from step 3>
 
+# Previews receive no webhook. They are driven through the /ops routes.
+# A preview never writes by default. To let it write on the playground, add "write": true
+# and set NUXI_REQUIRE_APPROVAL=false for Preview, since approvals only exist in production.
+# Behind Deployment Protection, also send the x-vercel-protection-bypass header.
 curl -X POST $NUXI_URL/ops/triage/trigger \
   -H "authorization: Bearer $INTERNAL_API_SECRET" -H "content-type: application/json" \
-  -d '{ "repo": "<you>/nuxi-triage-playground", "issueNumber": 1 }'
+  -d '{ "repo": "<you>/nuxi-playground", "issueNumber": 1 }'
+
+# Check: one JSON line per step, ending with `apply`, "dryRun": true and the intended actions.
+curl "$NUXI_URL/ops/decisions?repo=<you>/nuxi-playground" -H "authorization: Bearer $INTERNAL_API_SECRET"
 ```
 
-If the preview is behind Vercel Deployment Protection, add a bypass token header or disable protection for this project.
+## 8. Set up Discord
 
-Read what it decided:
+Writes in production wait for an approval in a Discord channel, with Approve and Cancel buttons. Without that channel, runs that want to write are forced to dry-run: eve's GitHub channel would otherwise post the approval prompt as a public comment on the issue.
 
-```sh
-curl "$NUXI_URL/ops/decisions?repo=<you>/nuxi-triage-playground" -H "authorization: Bearer $INTERNAL_API_SECRET"
-```
-
-Check: one line per step (`classify`, `duplicate`, `apply`, and so on), the last one with `"dryRun": true` and the actions it would have taken. Session logs are under Observability, then Logs.
-
-## 9. Set up Discord
-
-Do this before allowing writes. With approvals on, which is the default, a run that wants to write and has no Discord approvals channel is forced to dry-run. eve's GitHub channel would otherwise post the approval prompt as a public comment.
-
-### Create the bot
-
-1. Go to <https://discord.com/developers/applications> and create an application named `nuxi`.
-2. In Bot, reset and copy the token. No privileged intent is needed.
-3. In Installation, keep Guild Install, add the `bot` and `applications.commands` scopes, and the Send Messages, Embed Links and Read Message History permissions. Open the install link and add the bot to your server. Enable User Install too if you want `/ask` in a DM with the app.
-
-### Create the connector
-
-The guided setup does everything in one go: creates the Connect client, attaches `/eve/v1/discord` as its trigger, registers the `/ask` command, and points the application's Interactions Endpoint URL at Connect.
+Create an application at <https://discord.com/developers/applications>, copy its bot token, and add the bot to your server with the `bot` and `applications.commands` scopes and the Send Messages and Embed Links permissions. Create `#nuxi-digest` and `#nuxi-approvals`, and turn on Developer Mode in Discord to copy ids.
 
 ```sh
+# Asks for the bot token. Creates the discord/nuxi connector, registers /ask,
+# and points the application's Interactions Endpoint URL at Connect.
+# Do not pass --overwrite: the existing agent/channels/discord.ts has the maintainer check.
 pnpm eve add channel/discord
+
+vercel env add DISCORD_DIGEST_CHANNEL_ID production
+vercel env add DISCORD_APPROVALS_CHANNEL_ID production
+
+# Your Discord user id. Who can use /ask.
+vercel env add DISCORD_MAINTAINER_IDS production
+
+# discord:<server id>:<user id>. Who can approve. Unset, anyone who sees the channel can.
+vercel env add NUXI_APPROVER_IDS production
+
+# Check
+vercel connect list
 ```
 
-Paste the bot token when asked and keep `/ask` as the command. The project already has `agent/channels/discord.ts`. Do not pass `--overwrite`: the generated file would drop the maintainer check. If the setup names the connector something other than `discord/nuxi`, set `DISCORD_CONNECTOR` to its UID.
-
-If you prefer to do it by hand, these are the same steps:
+## 9. Create the production GitHub app
 
 ```sh
-echo '{"botToken":"<token>"}' | vercel connect create discord --connector-type discord --data @- --name nuxi --triggers -F json
-vercel connect attach discord/nuxi --environment production --triggers --trigger-path /eve/v1/discord
+# Same form and permissions as step 5. Install it on the playground too.
+# Without --trigger-event a GitHub connector only forwards pull_request,
+# and nuxi would never hear about a new issue.
+vercel connect create github --name nuxi --triggers \
+  --trigger-event issues --trigger-event issue_comment --trigger-event pull_request
 
-# Register /ask with a required `message` option
-curl -X PUT "https://discord.com/api/v10/applications/<application id>/commands" \
-  -H "Authorization: Bot <token>" -H "Content-Type: application/json" \
-  -d '[{"name":"ask","description":"Ask nuxi about the backlog","type":1,"options":[{"name":"message","description":"What do you want to know?","type":3,"required":true}]}]'
+# Connect verifies GitHub's signature and forwards the webhooks to this path.
+# There is no webhook secret or private key to store.
+vercel connect attach github/nuxi -e production --triggers --trigger-path /eve/v1/github
+
+# Check
+vercel connect list
 ```
 
-Then, in the Developer Portal under General Information, set the Interactions Endpoint URL to `https://connect.vercel.com/trigger/<connector id>`, with the `id` printed by `vercel connect create`. Connect verifies Discord's signature and forwards the interaction to `/eve/v1/discord`. It is not the deployment URL.
-
-Connect forwards triggers to the environment you attached, production here. To test Discord on a preview, attach again with `--environment preview --triggers --trigger-branch <branch> --trigger-path /eve/v1/discord`. A connector holds up to three trigger destinations.
-
-### Channels and ids
-
-Create two channels, for example `#nuxi-digest` and `#nuxi-approvals`, and make sure the bot can post in both. Turn on Developer Mode in Discord, then right click to copy ids.
+## 10. Deploy to production
 
 ```sh
-vercel env add DISCORD_DIGEST_CHANNEL_ID production      # channel id
-vercel env add DISCORD_APPROVALS_CHANNEL_ID production   # channel id
-vercel env add DISCORD_MAINTAINER_IDS production         # your user id, comma separated for several
-vercel env add NUXI_APPROVER_IDS production              # discord:<server id>:<user id>
-```
-
-`DISCORD_MAINTAINER_IDS` limits who can use `/ask`. `NUXI_APPROVER_IDS` limits who can press Approve. Leave it unset and anyone who sees the approvals channel can approve. A repository can override both channels under `discord` in its `.github/nuxi.yml`.
-
-## 10. Create the production GitHub App
-
-```sh
-vercel connect create github --name nuxi
-vercel connect attach github/nuxi --environment production --triggers --trigger-path /eve/v1/github
-```
-
-Same permissions as the preview app, plus these webhook events: Issues, Issue comment, Pull request. Connect receives and verifies the webhooks, then forwards them to `/eve/v1/github`. There is no webhook secret or private key to store.
-
-Install it on your personal account with the playground repository. The app answers to `@nuxi` in comments. GitHub shows it as `nuxi[bot]` and may not autocomplete the mention.
-
-## 11. Deploy to production
-
-```sh
+# It has to be created after steps 3, 8 and 9: a deployment keeps the variables it was built with.
+# Pushing to main does the same once the repository is connected to the project.
 pnpm run deploy
 ```
 
-Check, in the Vercel dashboard under Settings, then Cron Jobs: `dispatch_queue` every minute, `daily_sweep` at 03:00 UTC, `weekly_digest` on Monday at 07:00 and 08:00 UTC. Only the run that lands on 09:00 in Paris posts.
+Then, on the playground:
 
-Then test the whole loop on the playground:
-
-1. Open a new issue without a reproduction. Within about a minute a message appears in `#nuxi-approvals` with Approve and Cancel.
+1. Open an issue without a reproduction. Within a minute or two `#nuxi-approvals` shows the run, then an Approve prompt.
 2. Approve. The issue gets `needs reproduction`, loses `triage`, and receives one comment.
-3. Reply on the issue with a repository link. The bot picks up the comment, removes the label and runs the pipeline again.
+3. Reply with a repository link. nuxi removes the label and runs again.
 4. Comment `@nuxi can you triage this again?` on another issue.
 5. In Discord, `/ask message: what's waiting on me?`.
-6. Post a digest now instead of waiting for Monday:
 
 ```sh
+# The digest, now instead of Monday 09:00 Paris.
 curl -X POST https://<production-url>/ops/digest/trigger \
-  -H "authorization: Bearer <production secret>" -H "content-type: application/json" \
-  -d '{ "repo": "<you>/nuxi-triage-playground", "write": true }'
+  -H "authorization: Bearer $INTERNAL_API_SECRET" -H "content-type: application/json" \
+  -d '{ "repo": "<you>/nuxi-playground", "write": true }'
 ```
 
-## 12. Go to a real repository
+## 11. Go to a real repository
 
-1. See what nuxi would propose, without writing anything: `pnpm propose-setup <owner>/<repo>`. It prints the detected `.github/nuxi.yml` and the pull request body, including the workflows it would remove.
-2. Install the production app on the organization, limited to that repository. No code change and no redeploy.
-3. nuxi opens one pull request from the `nuxi/setup` branch. It contains the config with `dryRun: true`, and deletes the workflows nuxi replaces: `Hebilicious/reproduire`, and `actions/stale` jobs that only target `triage`, `needs reproduction` or `stale`. A stale workflow that covers pull requests or other labels is kept, and the body gives the `exempt-issue-labels` to add. The daily sweep opens it at 03:00 UTC. To get it now:
+```sh
+# Prints the config nuxi would propose and the workflows it would remove. Writes nothing.
+pnpm propose-setup <owner>/<repo>
 
-   ```sh
-   curl -X POST https://<production-url>/ops/setup/trigger \
-     -H "authorization: Bearer <production secret>" -H "content-type: application/json" \
-     -d '{ "repo": "<owner>/<repo>", "write": true }'
-   ```
-
-   Without `"write": true` the route returns the proposal as JSON. On Discord, `/ask message: set up <owner>/<repo>` does the same behind an approval. A repository that already has the file, or a setup pull request in any state, is left alone, so closing the PR is a final no. The automatic path is off when the installation covers more than 10 repositories, or with `NUXI_AUTO_SETUP=false`.
-4. Review the PR. Fix what the "To check" section lists, add `package.componentPrefix` and `nextMajor.package` if they apply, and compare with [`examples/nuxt-ui.nuxi.yml`](../examples/nuxt-ui.nuxi.yml). If you want to keep the old workflows while nuxi runs dry, drop the deletion commits from the branch and remove the files later. Merge. The repository is picked up within 5 minutes.
-5. `pnpm labels <owner>/<repo> --dry-run`, then without the flag.
-6. Let it run dry for a few days. Read `GET /ops/decisions?repo=<owner>/<repo>&since=<iso date>` or run `pnpm backfill <owner>/<repo> --url https://<production-url>` for a CSV that includes sandbox runs. Adjust `thresholds` in the repository's file.
-7. Set `dryRun: false`. Writes still wait for your approval in Discord.
-8. When you trust it, set `NUXI_REQUIRE_APPROVAL=false` and redeploy.
-
-To have later edits of the file checked on pull requests, add this workflow to the repository:
-
-```yaml
-# .github/workflows/nuxi-config.yml
-name: nuxi config
-on:
-  pull_request:
-    paths: ['.github/nuxi.yml']
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: benjamincanac/nuxi/action/validate-config@main
+# Install the nuxi app on the repository. The daily sweep then opens the setup pull request
+# at 03:00 UTC, unless the app is installed on more than 10 repositories or NUXI_AUTO_SETUP=false.
+# To open it right away:
+curl -X POST https://<production-url>/ops/setup/trigger \
+  -H "authorization: Bearer $INTERNAL_API_SECRET" -H "content-type: application/json" \
+  -d '{ "repo": "<owner>/<repo>", "write": true }'
 ```
 
-To follow a public repository before the app is installed on it, set `NUXI_EXTRA_REPOS=<owner>/<repo>`. It still needs the config file in that repository, so this is mostly useful for forks and mirrors.
+1. Review the pull request and fix what its "To check" section lists. It starts with `dryRun: true`. Closing it is a final no, nuxi never opens it again.
+2. Merge. The repository is picked up within 5 minutes.
+3. Let it run dry for a few days, then adjust `thresholds` in the repository's file.
+4. Set `dryRun: false`. Writes still wait for your approval in Discord.
+5. When you trust it, set `NUXI_REQUIRE_APPROVAL=false` and redeploy.
+
+```sh
+# What it decided while dry
+curl "https://<production-url>/ops/decisions?repo=<owner>/<repo>&since=<iso date>" \
+  -H "authorization: Bearer $INTERNAL_API_SECRET"
+
+# Or as a CSV, sandbox runs included
+pnpm backfill <owner>/<repo> --url https://<production-url>
+```
 
 ## Troubleshooting
 
 | Symptom | Cause |
 | --- | --- |
-| Nothing happens after opening an issue | No valid `.github/nuxi.yml` on the default branch. Run `pnpm validate-config`. Also check Cron Jobs: on Hobby the queue drains once a day. |
-| Decisions show `"dryRun": true` though the file says `false` | Approvals are required and no approvals channel is set, or the run came from a preview without `"write": true`. The logs say which. |
-| `blocked: "not a production deployment and not triggered explicitly"` | Expected on previews. Send `"write": true`. |
-| `/ask` answers nothing | Your Discord user id is not in `DISCORD_MAINTAINER_IDS`, or the Interactions Endpoint URL points at the deployment instead of Connect. |
-| Approve does nothing | Your principal id is not in `NUXI_APPROVER_IDS`. The format is `discord:<server id>:<user id>`. |
-| 401 from Jev or Connect locally | `VERCEL_OIDC_TOKEN` expired. Run `vercel env pull`. |
-| 403 on a GitHub write | The app lacks Issues write, or is not installed on that repository. |
-| Sandbox outcome is always `failed` locally | Docker only supports allow-all or deny-all egress. Domain allow-lists need Vercel Sandbox, so test the sandbox on a deployment. |
-| Wrong installation used once the app is on several accounts | Set `GITHUB_CONNECT_INSTALLATIONS` to map the owner to its Connect installation id. |
+| Nothing happens after opening an issue | No valid `.github/nuxi.yml` on the default branch, check with `pnpm validate-config`. Or the connector was created without the `issues` event. |
+| `"dryRun": true` though the file says `false` | No approvals channel is set, or the run came from a preview. |
+| `/ask` answers nothing | Your id is not in `DISCORD_MAINTAINER_IDS`. |
+| Approve does nothing | Your principal id is not in `NUXI_APPROVER_IDS`. |
+| 401 locally | `VERCEL_OIDC_TOKEN` expired, run `vercel env pull`. |
+| 403 on a GitHub write | The app lacks the permission, or is not installed on that repository. |
+| `A dev server is already running` | Delete `.eve/dev-server-state.v1.json`. |

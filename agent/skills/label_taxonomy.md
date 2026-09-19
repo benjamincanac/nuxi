@@ -19,7 +19,7 @@ You never pick labels. This page explains what the plan contains so you can desc
 | the repo's next major label | Requires a breaking change. | yes |
 | `stale` | Idle and likely obsolete. Maintainers are asked to decide. | no |
 | `a11y` | Accessibility. | no |
-| `component: <kebab-name>` | Component involved. One or more. | no |
+| an area label | Only when the repository opted in. Part of the codebase involved, as declared by the repository: a package, a command, a component. The label format is the repository's own, such as `pkg: kit`. Most repositories record areas without labeling them, `classify_issue` then returns them in `areas` and nothing shows on the issue. | no |
 | `has pr` | A pull request references the issue. | no |
 
 The Issue Type (Bug, Enhancement, Documentation) is set only when it is missing.

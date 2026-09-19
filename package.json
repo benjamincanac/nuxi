@@ -12,7 +12,6 @@
     "dev": "eve dev",
     "eval": "eve eval",
     "backfill": "tsx --env-file-if-exists=.env.local scripts/backfill.ts",
-    "labels": "tsx --env-file-if-exists=.env.local scripts/setup-labels.ts",
     "propose-setup": "tsx --env-file-if-exists=.env.local scripts/propose-setup.ts",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed-playground.ts",
     "start": "eve start",
@@ -30,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "24.x",
+    "microsandbox": "^0.7.2",
     "tsx": "^4.23.13",
     "typescript": "7.0.2"
   },

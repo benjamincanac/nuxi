@@ -30,13 +30,13 @@ export default defineTool({
       return { applied: false, reason: "Nothing to do: no decision was taken, the issue stays in triage." };
     }
 
-    const templated = plan.facts.includes("REPRODUCTION_REQUEST") ? reproductionRequest(context.config) : "";
+    const templated = plan.facts.includes("REPRODUCTION_REQUEST") ? reproductionRequest(context.reproduction) : "";
     const words = countWords(`${comment} ${templated}`);
     if (words > MAX_COMMENT_WORDS) {
       throw new Error(`The comment is ${words} words with the appended request, the limit is ${MAX_COMMENT_WORDS}. Shorten it and call apply_triage again.`);
     }
 
-    const actions = await applyPlan(context.config, plan, comment, context.humanLabels, context.issue.labels);
+    const actions = await applyPlan(context.config, plan, comment, context.humanLabels, context.issue.labels, context.reproduction);
     return { applied: !actions.dryRun, ...actions };
   },
 });

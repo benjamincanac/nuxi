@@ -1,21 +1,12 @@
 # Evals
 
-These evals drive the triage bot against offline fixtures instead of real GitHub issues. A fixture is a JSON file in `evals/data/<name>.json` validated against `fixtureSchema` in `agent/lib/context.ts`. It bundles a repo config, a component list, an issue with its comments, and precomputed candidates for duplicates, upstream matches, fixed-by PRs, and reproduction checks.
-
-Each eval addresses its fixture as `fixture/<name>#1`, owner `"fixture"`, repo `"<name>"`, issue number `1`. `loadTriageContext` detects the `fixture` owner and loads the JSON file directly, skipping every GitHub read and forcing `dryRun: true`, so no eval ever writes anywhere.
-
-Fixtures model a fictional Vue component library (`@acme/ui`) with components like `Button`, `Select`, and `Table`, so the agent's classification logic stays testable without depending on the real nuxi repository config.
-
-Run everything:
-
-```bash
-pnpm eval
+```sh
+pnpm eval                  # everything
+pnpm eval triage/duplicate # one eval
 ```
 
-Run only the triage cases:
+Evals call Jev and the model for real, so they need the `VERCEL_OIDC_TOKEN` from `vercel env pull`. They never call GitHub.
 
-```bash
-pnpm eval triage
-```
+Each eval triages a fixture, a JSON file in `evals/data/<name>.json` addressed as `fixture/<name>#1`. A fixture carries its own config, issue, comments, and the candidates the tools would otherwise fetch: similar issues, upstream issues, merged pull requests and the reproduction check. Its shape is `fixtureSchema` in [`agent/lib/context.ts`](../agent/lib/context.ts). Fixtures always run in dry-run.
 
-Add `--strict` in CI to fail the build on soft threshold misses, not just hard gates.
+An eval asserts which tools ran and what they returned. Those are the gates. One judge assertion then grades the wording of the final summary, which varies between runs, so a `scored` result with every gate green is fine.

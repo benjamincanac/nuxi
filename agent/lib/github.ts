@@ -6,6 +6,9 @@ import {
   githubConnector,
   parseRepoConfig,
   resolveRepoConfig,
+  sourceRepo,
+  toArea,
+  type Area,
   type RepoConfig,
 } from "../config";
 
@@ -365,8 +368,11 @@ const treeSchema = z.object({
 
 const repoSchema = z.object({ default_branch: z.string() });
 
-/** Component names (PascalCase) matching a single-level glob such as `src/runtime/components/*.vue`. */
-export async function listComponents(ref: RepoRef, glob: string, signal?: AbortSignal): Promise<string[]> {
+/**
+ * Names matching a single-level glob. `src/components/*.vue` yields file names without their
+ * extension, `packages/*` yields directory names.
+ */
+export async function listGlobNames(ref: RepoRef, glob: string, signal?: AbortSignal): Promise<string[]> {
   const { default_branch } = await gh(repoSchema, `/repos/${ref.owner}/${ref.repo}`, { owner: ref.owner, signal });
   const { tree } = await gh(
     treeSchema,
@@ -375,20 +381,26 @@ export async function listComponents(ref: RepoRef, glob: string, signal?: AbortS
   );
   const pattern = new RegExp(
     `^${glob
+      .replace(/\/+$/, "")
       .split("*")
       .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
       .join("[^/]*")}$`,
   );
-  return tree
-    .filter((entry) => entry.type === "blob" && pattern.test(entry.path))
-    .map((entry) => entry.path.split("/").pop()?.replace(/\.[^.]+$/, "") ?? "")
-    .filter((name) => name.length > 0)
-    .sort();
+  // `dir/*.ext` names files, a bare `dir/*` names sub-directories.
+  const wanted = /\*\.[\w.]+$/.test(glob) ? "blob" : "tree";
+  const names = tree
+    .filter((entry) => entry.type === wanted && pattern.test(entry.path))
+    .map((entry) => {
+      const base = entry.path.split("/").pop() ?? "";
+      return entry.type === "blob" ? base.replace(/\.[^.]+$/, "") : base;
+    })
+    .filter((name) => name.length > 0);
+  return [...new Set(names)].sort();
 }
 
 const CACHE_TTL_MS = 5 * 60_000;
 const configCache = new Map<string, { expires: number; value: RepoConfig | null }>();
-const componentCache = new Map<string, { expires: number; value: string[] }>();
+const areaCache = new Map<string, { expires: number; value: Area[] }>();
 
 /** Returns `null` when the file is missing or invalid, which disables triage for the repo. */
 export async function loadRepoConfig(ref: RepoRef, signal?: AbortSignal): Promise<RepoConfig | null> {
@@ -410,19 +422,40 @@ export async function loadRepoConfig(ref: RepoRef, signal?: AbortSignal): Promis
   return value;
 }
 
-export async function loadComponents(config: RepoConfig, signal?: AbortSignal): Promise<string[]> {
-  if (!config.components) return [];
-  const source = config.componentsSource ?? `${config.owner}/${config.repo}`;
-  const key = `${source}:${config.components}`;
-  const cached = componentCache.get(key);
+/** The repo's areas, from every `areas` entry: glob matches in the source repo plus explicit names. */
+export async function loadAreas(config: RepoConfig, signal?: AbortSignal): Promise<Area[]> {
+  if (config.areas.length === 0) return [];
+  const source = sourceRepo(config);
+  const key = `${source.owner}/${source.repo}:${JSON.stringify(config.areas)}`;
+  const cached = areaCache.get(key);
   if (cached && cached.expires > Date.now()) return cached.value;
-  const [owner = "", repo = ""] = source.split("/");
-  const value = await listComponents({ owner, repo }, config.components, signal);
-  componentCache.set(key, { expires: Date.now() + CACHE_TTL_MS, value });
+
+  const areas = new Map<string, Area>();
+  for (const group of config.areas) {
+    const names = [...group.names, ...(group.glob ? await listGlobNames(source, group.glob, signal) : [])];
+    for (const name of names) {
+      const area = toArea(name, group);
+      const key = `${area.kind}:${area.slug}`;
+      if (!areas.has(key)) areas.set(key, area);
+    }
+  }
+  const value = [...areas.values()];
+  areaCache.set(key, { expires: Date.now() + CACHE_TTL_MS, value });
   return value;
 }
 
 // Writes. Only `applyPlan` in lib/apply.ts calls these.
+
+/** Creates a label when it does not exist yet. An existing label is never edited. */
+export async function ensureLabel(ref: RepoRef, name: string, color: string, description: string): Promise<void> {
+  const response = await rawRequest(`/repos/${ref.owner}/${ref.repo}/labels`, {
+    owner: ref.owner,
+    method: "POST",
+    body: { name, color, description: description.slice(0, 100) },
+  });
+  // 422: it already exists.
+  if (!response.ok && response.status !== 422) throw new GitHubRequestError(response.status, "labels", await response.text());
+}
 
 export async function addLabels(ref: IssueRef, labels: string[]): Promise<void> {
   if (!labels.length) return;

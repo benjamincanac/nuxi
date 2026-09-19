@@ -71,8 +71,8 @@ function probabilities(answers: Record<string, unknown>): Record<string, number>
     const parsed = z.record(z.string(), answer).safeParse(questions);
     if (!parsed.success) continue;
     for (const [id, value] of Object.entries(parsed.data)) {
-      // Component questions are only interesting when they fire.
-      if (id.startsWith("component_") && (value.probability ?? 0) < 0.5) continue;
+      // Area questions are only interesting when they fire.
+      if (id.startsWith("area_") && (value.probability ?? 0) < 0.5) continue;
       const number = value.probability ?? value.score ?? (value.choice ? (value.probabilities?.[value.choice] ?? 1) : undefined);
       if (number !== undefined) out[`${step}.${id}${value.choice ? `=${value.choice}` : ""}`] = Math.round(number * 1_000) / 1_000;
     }

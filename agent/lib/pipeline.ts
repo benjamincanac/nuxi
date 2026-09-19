@@ -5,7 +5,7 @@ import { skipReason, type TriageContext } from "./context";
 import { emptyPlan, mergePlan, type TriagePlan } from "./plan";
 import { classify } from "./steps/classify";
 import { checkDuplicate } from "./steps/duplicate";
-import { checkFixedInRelease } from "./steps/fixed";
+import { checkFixedInRelease, knownAreas } from "./steps/fixed";
 import { validateReproduction } from "./steps/reproduction";
 import { runSandboxRepro } from "./steps/sandbox";
 import { trackUpstream } from "./steps/upstream";
@@ -68,8 +68,8 @@ export async function runPipeline(
     }
 
     if (classified.next.includes("check_fixed_in_release")) {
-      const components = [...issue.labels, ...plan.addLabels].filter((label) => label.startsWith("component: "));
-      const fixed = await checkFixedInRelease(context, components, plan.sandbox, signal);
+      const areaSlugs = knownAreas(context, plan.areas);
+      const fixed = await checkFixedInRelease(context, areaSlugs, plan.sandbox, signal);
       answers.fixed = fixed.answers;
       plan = mergePlan(plan, "check_fixed_in_release", fixed.patch);
     }
@@ -81,5 +81,5 @@ export async function runPipeline(
     }
   }
 
-  return { plan, answers, commentPreview: plan.escalate ? "" : buildComment(config, plan, "") };
+  return { plan, answers, commentPreview: plan.escalate ? "" : buildComment(config, plan, "", context.reproduction) };
 }

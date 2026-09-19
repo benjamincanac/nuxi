@@ -45,6 +45,7 @@ export default defineTool({
       type: outcome.type,
       upstream: plan.addLabels.find((label) => label.startsWith("upstream/")) ?? null,
       plannedLabels: plan.addLabels,
+      areas: plan.areas,
       facts: plan.facts,
       next: plan.escalate || plan.security ? [] : outcome.next,
     };

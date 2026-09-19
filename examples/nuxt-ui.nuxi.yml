@@ -1,7 +1,9 @@
 # .github/nuxi.yml for nuxt/ui
 dryRun: true
 maintainers: [benjamincanac]
-components: src/runtime/components/*.vue
+areas:
+  - kind: component
+    glob: src/runtime/components/*.vue
 upstreams:
   - unovue/reka-ui
   - ueberdosis/tiptap
@@ -10,25 +12,13 @@ upstreams:
   - nuxt/nuxt
 package:
   name: "@nuxt/ui"
-  componentPrefix: U
 nextMajor:
   label: v5
   branch: v5
   package: https://pkg.pr.new/@nuxt/ui@{sha}
-reproduction:
-  guide: https://nuxt.com/docs/community/reporting-bugs/#create-a-minimal-reproduction
-  templates:
-    - name: Nuxt
-      url: https://codesandbox.io/p/devbox/nuxt-ui-xgrzw5
-    - name: Vue
-      url: https://codesandbox.io/p/devbox/nuxt-ui-vue-f2qp34
-  blank:
-    - nuxt-ui-xgrzw5
-    - nuxt-ui-vue-f2qp34
-    - nuxt-ui-templates/starter
 securityPolicy: https://github.com/nuxt/.github/blob/main/SECURITY.md
 help: https://nuxt.com
-decisions: [type, question, upstream, reproduction, sandbox, fixed, duplicate, answered, breaking, a11y, component, pr]
+decisions: [type, question, upstream, reproduction, sandbox, fixed, duplicate, answered, breaking, a11y, area, pr]
 thresholds: {}          # overrides of the defaults in agent/config.ts
 sweep: { followUpDays: 14, mentionDays: 30, staleDays: 60 }
 discord:

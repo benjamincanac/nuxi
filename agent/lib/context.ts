@@ -3,17 +3,18 @@ import { join } from "node:path";
 
 import { z } from "zod";
 
-import { repoConfigSchema, resolveRepoConfig, type RepoConfig } from "../config";
+import { repoConfigSchema, resolveRepoConfig, toArea, type Area, type RepoConfig } from "../config";
 import {
   getIssue,
   getTimeline,
   humanAppliedLabels,
   listPinnedIssues,
-  loadComponents,
+  loadAreas,
   loadRepoConfig,
   type Issue,
   type IssueRef,
 } from "./github";
+import { loadReproductionSettings, reproductionFromConfig, type ReproductionSettings } from "./issue-forms";
 
 export const FIXTURE_OWNER = "fixture";
 
@@ -43,7 +44,7 @@ const fixedCandidateSchema = z.object({
 
 const reproductionSchema = z.object({
   url: z.string(),
-  kind: z.enum(["stackblitz", "codesandbox", "github", "snippet"]),
+  kind: z.enum(["stackblitz", "codesandbox", "github", "playground", "snippet"]),
   resolves: z.boolean(),
   usesPackage: z.boolean().nullable(),
   blankTemplate: z.boolean(),
@@ -58,7 +59,6 @@ export type ReproductionCheck = z.output<typeof reproductionSchema>;
 /** Offline issue used by the evals. Lives in `evals/data/<repo>.json`, addressed as `fixture/<repo>#1`. */
 const fixtureSchema = z.object({
   config: repoConfigSchema,
-  components: z.array(z.string()),
   latestVersion: z.string().default("1.0.0"),
   issue: z.object({
     title: z.string(),
@@ -82,7 +82,9 @@ export type Fixture = z.output<typeof fixtureSchema>;
 export interface TriageContext {
   config: RepoConfig;
   issue: Issue;
-  components: string[];
+  areas: Area[];
+  /** Where reproductions start from, read from the repo's issue forms. */
+  reproduction: ReproductionSettings;
   humanLabels: Set<string>;
   lastHumanActivity: number | null;
   pinned: boolean;
@@ -106,7 +108,9 @@ async function loadFixture(ref: IssueRef): Promise<TriageContext> {
       thumbsUp: 0,
       isPullRequest: false,
     },
-    components: fixture.components,
+    // Fixtures list their areas by name, there is no repository to glob.
+    areas: config.areas.flatMap((group) => group.names.map((name) => toArea(name, group))),
+    reproduction: reproductionFromConfig(config),
     humanLabels: new Set(),
     lastHumanActivity: null,
     pinned: false,
@@ -126,11 +130,12 @@ export async function loadTriageContext(
   const config = override ?? (await loadRepoConfig(ref, signal));
   if (!config) return null;
 
-  const [issue, timeline, components, pinned] = await Promise.all([
+  const [issue, timeline, areas, pinned, reproduction] = await Promise.all([
     getIssue(ref, signal),
     getTimeline(ref, signal),
-    loadComponents(config, signal),
+    loadAreas(config, signal),
     listPinnedIssues(ref, signal).catch(() => [] as number[]),
+    loadReproductionSettings(config, signal),
   ]);
 
   const humanTimes: number[] = [];
@@ -150,7 +155,8 @@ export async function loadTriageContext(
   return {
     config,
     issue,
-    components,
+    areas,
+    reproduction,
     humanLabels: humanAppliedLabels(timeline),
     lastHumanActivity: humanTimes.length ? Math.max(...humanTimes) : null,
     pinned: pinned.includes(ref.issueNumber),
@@ -165,7 +171,7 @@ export function skipReason(context: TriageContext, force: boolean): string | nul
   const { issue, config } = context;
   if (issue.isPullRequest) return "pull request";
   if (issue.state !== "open") return "closed";
-  if (config.maintainers.some((login) => login.toLowerCase() === issue.author.toLowerCase())) {
+  if (!config.triageMaintainerIssues && config.maintainers.some((login) => login.toLowerCase() === issue.author.toLowerCase())) {
     return "authored by a maintainer";
   }
   if (issue.author.toLowerCase().startsWith("renovate")) return "authored by renovate";

@@ -1,6 +1,6 @@
 import type { Experimental_EvaluationQuestion as Question } from "ai";
 
-import { kebabCase } from "../../config";
+import type { Area } from "../../config";
 
 type BooleanQuestion = Extract<Question, { type: "boolean" }>;
 
@@ -80,19 +80,19 @@ export function upstreamQuestion(upstreams: readonly string[]) {
   } as const satisfies Question;
 }
 
-export type ComponentQuestionId = `component_${string}`;
+export type AreaQuestionId = `area_${string}`;
 
-export function componentQuestionId(name: string): ComponentQuestionId {
-  return `component_${kebabCase(name).replaceAll("-", "_")}`;
+export function areaQuestionId(area: Pick<Area, "kind" | "slug">): AreaQuestionId {
+  return `area_${area.kind}_${area.slug}`.replaceAll(/[^a-z0-9]+/gi, "_").toLowerCase() as AreaQuestionId;
 }
 
-/** One boolean per component found by the repo's `components` glob. */
-export function componentQuestions(components: readonly string[], prefix = ""): Record<ComponentQuestionId, BooleanQuestion> {
-  const questions: Record<ComponentQuestionId, BooleanQuestion> = {};
-  for (const name of components) {
-    questions[componentQuestionId(name)] = {
+/** One boolean per area declared by the repo: a component, a package, a command. */
+export function areaQuestions(areas: readonly Area[]): Record<AreaQuestionId, BooleanQuestion> {
+  const questions: Record<AreaQuestionId, BooleanQuestion> = {};
+  for (const area of areas) {
+    questions[areaQuestionId(area)] = {
       type: "boolean",
-      instructions: `Is the ${name} component${prefix ? ` (${prefix}${name})` : ""} directly involved in this issue, as the component that misbehaves or that the request targets? A component that only appears in surrounding code does not count.`,
+      instructions: `Is the ${area.name} ${area.kind} directly involved in this issue, as the part that misbehaves or that the request targets? Users may write its name with a prefix, in kebab-case or in another casing. One that only appears in surrounding code does not count.`,
     };
   }
   return questions;
@@ -137,7 +137,7 @@ export function fixedQuestions(candidates: readonly { id: string; summary: strin
     is_fixed: {
       type: "boolean",
       instructions:
-        "Is the problem described in the issue likely fixed in a published release, given the candidates and the sandbox result when present?",
+        "Is the problem described in the issue likely fixed in a published release, given the candidates and the sandbox result when present? A merged pull request that references this issue, addresses the same behavior and shipped in a release is strong evidence. A reproduction still pinned to an older version is not evidence against it.",
     },
   } as const satisfies Record<string, Question>;
 }

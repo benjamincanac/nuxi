@@ -14,7 +14,7 @@ export const DECISIONS = [
   "answered",
   "breaking",
   "a11y",
-  "component",
+  "area",
   "pr",
 ] as const;
 
@@ -47,16 +47,40 @@ const repoSlug = z.string().regex(/^[\w.-]+\/[\w.-]+$/, "Expected owner/repo");
 export const repoConfigSchema = z.strictObject({
   dryRun: z.boolean().default(true),
   maintainers: z.array(z.string().min(1)).min(1),
-  components: z.string().min(1).optional(),
-  componentsSource: repoSlug.optional(),
+  /** Issues authored by a maintainer are skipped. Turn on for a playground seeded from your own account. */
+  triageMaintainerIssues: z.boolean().default(false),
+  /**
+   * The code lives in another repository. Areas, releases and the next major branch are read from there.
+   * Meant for a playground that mirrors the issues of a real repository.
+   */
+  source: repoSlug.optional(),
+  /**
+   * Named parts of the codebase an issue can be about: the components of a UI library, the packages
+   * of a monorepo, the commands of a CLI. Each area gets one Jev question. What Jev finds is recorded
+   * with the run and used to match changelog scopes and to cluster the backlog. A label is optional.
+   */
+  areas: z
+    .array(
+      z
+        .strictObject({
+          /** Singular noun used in the question, such as `component`, `package` or `command`. */
+          kind: z.string().min(1).default("area"),
+          /** Optional label template, applied when set. `{name}` is replaced by the kebab-case name. */
+          label: z.string().includes("{name}").optional(),
+          /** One area per match of this single-level glob, named after the file or directory. */
+          glob: z.string().min(1).optional(),
+          /** Explicit names, alone or on top of `glob`. */
+          names: z.array(z.string().min(1)).default([]),
+        })
+        .refine((area) => area.glob !== undefined || area.names.length > 0, "Expected `glob` or `names`"),
+    )
+    .default([]),
   upstreams: z.array(repoSlug).default([]),
   /** npm package the repo publishes. Without it, version checks and sandbox runs are skipped. */
   package: z
     .strictObject({
       // Interpolated into a shell command in the sandbox, so the charset is closed.
       name: z.string().regex(/^(@[a-z0-9][\w.-]*\/)?[a-z0-9][\w.-]*$/, "Expected an npm package name"),
-      /** Prefix users write in templates, such as `U` for `UButton`. */
-      componentPrefix: z.string().default(""),
     })
     .optional(),
   /** Next major version. Breaking changes get `label`, the sandbox also builds against `branch`. */
@@ -156,8 +180,34 @@ export function kebabCase(name: string): string {
     .toLowerCase();
 }
 
-export function componentLabel(name: string): string {
-  return `component: ${kebabCase(name)}`;
+/** One named part of the codebase, resolved from the repo's `areas` config. */
+export interface Area {
+  name: string;
+  /** Kebab-case name. Also what a conventional-commit scope is compared to. */
+  slug: string;
+  kind: string;
+  /** `null` when the repo does not want a label for this kind of area. */
+  label: string | null;
+}
+
+export function toArea(name: string, group: { kind: string; label?: string | undefined }): Area {
+  const slug = kebabCase(name);
+  return { name, slug, kind: group.kind, label: group.label?.replaceAll("{name}", slug) ?? null };
+}
+
+/** Whether a label was produced by one of the repo's area templates. */
+export function isAreaLabel(config: Pick<RepoConfig, "areas">, label: string): boolean {
+  return config.areas.some((group) => {
+    if (!group.label) return false;
+    const [prefix = "", suffix = ""] = group.label.split("{name}");
+    return label.length > prefix.length + suffix.length && label.startsWith(prefix) && label.endsWith(suffix);
+  });
+}
+
+/** The repository that holds the code: `source` when set, the repo itself otherwise. */
+export function sourceRepo(config: Pick<RepoConfig, "owner" | "repo" | "source">): { owner: string; repo: string } {
+  const [owner = config.owner, repo = config.repo] = (config.source ?? "").split("/");
+  return config.source ? { owner, repo } : { owner: config.owner, repo: config.repo };
 }
 
 /** Connector used for every GitHub call. Previews and local dev never share the production app. */

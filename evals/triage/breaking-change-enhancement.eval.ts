@@ -11,7 +11,7 @@ export default defineEval({
     t.calledTool("apply_triage");
     t.judge.autoevals
       .closedQA(
-        "States that the request would require a breaking change and was labeled for the next major version, v5.",
+        "States that the v5 label was added to the issue.",
         { on: t.transcript },
       )
       .atLeast(0.7);

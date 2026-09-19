@@ -1,21 +1,49 @@
 {
   "config": {
     "dryRun": true,
-    "maintainers": ["maintainer"],
-    "upstreams": ["unovue/reka-ui", "tailwindlabs/tailwindcss"],
-    "package": { "name": "@acme/ui", "componentPrefix": "U" },
-    "nextMajor": { "label": "v5" },
-    "reproduction": { "blank": ["acme-ui-starter"] },
-    "securityPolicy": "https://example.com/SECURITY.md"
+    "maintainers": [
+      "maintainer"
+    ],
+    "upstreams": [
+      "unovue/reka-ui",
+      "tailwindlabs/tailwindcss"
+    ],
+    "package": {
+      "name": "@acme/ui"
+    },
+    "nextMajor": {
+      "label": "v5"
+    },
+    "reproduction": {
+      "blank": [
+        "acme-ui-starter"
+      ]
+    },
+    "securityPolicy": "https://example.com/SECURITY.md",
+    "areas": [
+      {
+        "kind": "component",
+        "names": [
+          "Button",
+          "Select",
+          "SelectMenu",
+          "Modal",
+          "Table",
+          "Input",
+          "Tooltip"
+        ]
+      }
+    ]
   },
-  "components": ["Button", "Select", "SelectMenu", "Modal", "Table", "Input", "Tooltip"],
   "latestVersion": "1.4.0",
   "issue": {
     "title": "UInput emits input event twice when using v-model with debounce",
     "body": "### Environment\n\n- @acme/ui: 1.1.0\n- Vue: 3.4.21\n- Nuxt: 3.12.0\n\n### Description\n\n`UInput` fires the `update:modelValue` event twice for a single keystroke when a debounced watcher is attached to the bound ref. This causes our search box to fire two requests per character.\n\n### Reproduction\n\nhttps://github.com/priyad/acme-input-debounce-repro\n\n### Expected behavior\n\nOne keystroke should emit exactly one update event.",
     "author": "priyad",
     "authorAssociation": "NONE",
-    "labels": ["triage"],
+    "labels": [
+      "triage"
+    ],
     "type": null,
     "createdAt": "2026-08-05T11:20:00Z",
     "comments": []
@@ -30,7 +58,11 @@
     "usesPackage": true,
     "blankTemplate": false,
     "version": "1.1.0",
-    "repository": { "owner": "priyad", "repo": "acme-input-debounce-repro", "ref": null }
+    "repository": {
+      "owner": "priyad",
+      "repo": "acme-input-debounce-repro",
+      "ref": null
+    }
   },
   "sandboxLogs": null
 }
