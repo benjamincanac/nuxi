@@ -6,6 +6,6 @@ export default defineAgent({
   defaultTools: false,
   // Every decision is taken by Jev inside the tools. The model only follows the skill, writes the
   // comment and picks the mention template, so the cheapest model is enough.
-  model: "zai/glm-4.7-flashx",
+  model: "deepseek/deepseek-v4.1-flash",
   reasoning: "none",
 });
