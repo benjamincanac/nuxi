@@ -260,6 +260,7 @@ pnpm backfill <owner>/<repo> --url https://<production-url>
 | `"dryRun": true` though the file says `false` | No approvals channel is set, or the run came from a preview. |
 | `/ask` answers nothing | Your id is not in `DISCORD_MAINTAINER_IDS`. |
 | Approve does nothing | Your principal id is not in `NUXI_APPROVER_IDS`. |
+| `nuxi didn't respond in time` on Approve | The application's Interactions Endpoint URL is empty. Editing the application in Discord's portal clears it. Set it back to the connector's trigger URL, `https://connect.vercel.com/trigger/<connector id>`. |
 | 401 locally | `VERCEL_OIDC_TOKEN` expired, run `vercel env pull`. |
 | 403 on a GitHub write | The app lacks the permission. |
 | 404 on a repository the deployment reads | The app is not installed on it, or the installation does not select it. Check <https://github.com/settings/installations>. |

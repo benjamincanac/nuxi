@@ -51,12 +51,26 @@ export default discordChannel({
   },
   events: {
     async "input.requested"(event, channel, ctx) {
+      const { channelId, conversationId, interactionToken } = channel.discord;
+      let anchored = false;
       for (const request of event.requests) {
         const detail = request.action?.toolName === "apply_triage" ? await describeWrite(request.action.input, `${ctx.session.id}:${ctx.session.turn.id}`) : "";
-        await channel.discord.post({
+        const body = {
+          allowed_mentions: { parse: [] },
           components: renderInputRequestComponents(request),
-          content: detail ? `${detail}\n\n${request.prompt}` : request.prompt,
-        });
+          content: (detail ? `${detail}\n\n${request.prompt}` : request.prompt).slice(0, 1_900),
+        };
+        // A run started from a schedule is anchored to the message that opened it. Discord sends the
+        // id of the message the button sits on, so buttons on any later message resolve to no session
+        // and the approval is dropped. The prompt replaces the opening message instead.
+        if (!anchored && !interactionToken && conversationId) {
+          // `request` takes plain JSON, and the rendered components are readonly.
+          const json = JSON.parse(JSON.stringify(body)) as Parameters<typeof channel.discord.request>[1];
+          await channel.discord.request(`/channels/${channelId}/messages/${conversationId}`, json, { botAuth: true, method: "PATCH" });
+          anchored = true;
+          continue;
+        }
+        await channel.discord.post(body);
       }
     },
   },
