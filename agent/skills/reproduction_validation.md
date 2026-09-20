@@ -6,7 +6,7 @@ description: Use when a bug has or lacks a reproduction, to phrase the request, 
 
 ## No reproduction
 
-`classify_issue` plans `needs reproduction` and returns the fact `REPRODUCTION_REQUEST`. The templated request is appended by `apply_triage`, with the guide and the starter links taken from the repository's own issue form. Write at most one sentence before it, for example a thank you for the report.
+`classify_issue` plans `needs reproduction` and returns the fact `REPRODUCTION_REQUEST`. The templated request is appended by `apply_triage`, with the guide and the starter links taken from the repository's own issue form. Write one short sentence before it, a thank you for the report and nothing else. Never say that a reproduction is needed, that a link would help, or that the label was added: the appended request says all of it, and repeating it reads as padding.
 
 ## A reproduction is present
 

@@ -2,6 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 
 import { searchIssues } from "../lib/github";
+import { refuseDuringTriage } from "../lib/tool";
 
 export default defineTool({
   description:
@@ -12,6 +13,7 @@ export default defineTool({
   }),
   label: { start: ({ query }) => `Search ${query}` },
   async execute({ query, limit }, ctx) {
+    await refuseDuringTriage(ctx);
     const items = await searchIssues(query, limit, ctx.abortSignal);
     return {
       results: items.map((item) => ({

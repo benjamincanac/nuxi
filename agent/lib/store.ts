@@ -183,8 +183,14 @@ export function getPlan(runId: string, ref: IssueRef): Promise<TriagePlan | null
   return kv().get<TriagePlan>(`nuxi:plan:${runId}:${issueKey(ref)}`);
 }
 
-export function savePlan(runId: string, plan: TriagePlan): Promise<void> {
-  return kv().set(`nuxi:plan:${runId}:${issueKey(plan.issue)}`, plan, WEEK_SECONDS);
+export async function savePlan(runId: string, plan: TriagePlan): Promise<void> {
+  await kv().set(`nuxi:plan:${runId}:${issueKey(plan.issue)}`, plan, WEEK_SECONDS);
+  await kv().set(`nuxi:run:${runId}`, true, WEEK_SECONDS);
+}
+
+/** Whether this run is a triage run, meaning a tool has already recorded a plan for it. */
+export async function isTriageRun(runId: string): Promise<boolean> {
+  return (await kv().get<boolean>(`nuxi:run:${runId}`)) === true;
 }
 
 export function trackUpstreamPair(pair: UpstreamPair): Promise<void> {

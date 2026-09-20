@@ -4,6 +4,7 @@ import { z } from "zod";
 import { buildDigest } from "../lib/digest";
 import { listEnabledRepositories } from "../lib/github";
 import { listDecisions } from "../lib/store";
+import { refuseDuringTriage } from "../lib/tool";
 
 export default defineTool({
   description:
@@ -14,6 +15,7 @@ export default defineTool({
   }),
   label: { start: ({ repo }) => `Read backlog status${repo ? ` of ${repo}` : ""}` },
   async execute({ repo, issueNumber }, ctx) {
+    await refuseDuringTriage(ctx);
     const configs = (await listEnabledRepositories(ctx.abortSignal)).filter(
       (config) => !repo || `${config.owner}/${config.repo}`.toLowerCase() === repo.toLowerCase(),
     );

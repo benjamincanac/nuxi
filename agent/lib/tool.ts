@@ -4,7 +4,7 @@ import { z } from "zod";
 import { env, requireApproval } from "../config";
 import { FIXTURE_OWNER, loadTriageContext, type TriageContext } from "./context";
 import { loadRepoConfig, type IssueRef } from "./github";
-import { isDryRunForced } from "./store";
+import { isDryRunForced, isTriageRun } from "./store";
 
 export const issueInput = z.object({
   owner: z.string().min(1).describe("Repository owner"),
@@ -22,6 +22,16 @@ export async function requireContext(ref: IssueRef, signal?: AbortSignal): Promi
   if (!context) throw new Error(`Triage is disabled for ${ref.owner}/${ref.repo}: no valid .github/nuxi.yml.`);
   if (!context.config.dryRun && (await isDryRunForced(ref))) context.config = { ...context.config, dryRun: true };
   return context;
+}
+
+/**
+ * Backlog tools answer a maintainer's questions. Inside a triage run they are a detour, and a small
+ * model will take it, so they refuse once the run has a plan.
+ */
+export async function refuseDuringTriage(ctx: { session: { id: string; turn: { id: string } } }): Promise<void> {
+  if (await isTriageRun(runId(ctx))) {
+    throw new Error("Not available during a triage run. Follow the triage skill and finish with apply_triage.");
+  }
 }
 
 /**
