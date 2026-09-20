@@ -104,7 +104,7 @@ export async function applyPlan(
 
   const write = !plan.dryRun && actions.blocked === null;
   if (write) {
-    if (actions.setType) await setIssueType(plan.issue, actions.setType);
+    if (actions.setType && !(await setIssueType(plan.issue, actions.setType))) actions.setType = null;
     // Labels are created on first use, with their color and description. An existing label is never edited.
     for (const label of actions.addedLabels) {
       const style = labelStyle(config, label);

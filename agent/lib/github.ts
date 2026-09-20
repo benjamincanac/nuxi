@@ -537,12 +537,17 @@ export async function addComment(ref: IssueRef, body: string): Promise<string> {
   return created.html_url;
 }
 
-export async function setIssueType(ref: IssueRef, type: string): Promise<void> {
-  await gh(z.unknown(), `/repos/${ref.owner}/${ref.repo}/issues/${ref.issueNumber}`, {
-    owner: ref.owner,
-    method: "PATCH",
-    body: { type },
-  });
+/**
+ * Issue Types belong to an organization. A repository owned by a user has none, and GitHub accepts
+ * the field then ignores it, so the answer is read back from the response rather than assumed.
+ */
+export async function setIssueType(ref: IssueRef, type: string): Promise<boolean> {
+  const issue = await gh(
+    z.object({ type: z.object({ name: z.string() }).nullish() }),
+    `/repos/${ref.owner}/${ref.repo}/issues/${ref.issueNumber}`,
+    { owner: ref.owner, method: "PATCH", body: { type } },
+  );
+  return issue.type?.name === type;
 }
 
 const pinnedSchema = z.object({
