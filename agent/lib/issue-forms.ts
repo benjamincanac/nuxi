@@ -53,12 +53,16 @@ interface FoundLink {
 export function extractLinks(text: string): FoundLink[] {
   const links: FoundLink[] = [];
   const markdown = /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
-  for (const match of text.matchAll(markdown)) links.push({ name: (match[1] ?? "").trim(), url: match[2] ?? "" });
+  for (const match of text.matchAll(markdown)) {
+    // A link that does not parse is dropped here, so every caller below can read its host and path.
+    if (URL.canParse(match[2] ?? "")) links.push({ name: (match[1] ?? "").trim(), url: match[2] ?? "" });
+  }
   // Bare URLs, labeled by the words right before them: "the Vue template https://…" gives "Vue".
   const bare = /(?:\b(?:the|a|our)\s+)?((?:[A-Z][\w.]*\s+){0,2})(?:template|starter|playground)?\s*(?<![(\]])(https?:\/\/[^\s)>\]"'`,]+)/g;
   for (const match of text.replace(markdown, " ").matchAll(bare)) {
     const url = (match[2] ?? "").replace(/[.;]+$/, "");
-    links.push({ name: (match[1] ?? "").trim() || new URL(url).hostname, url });
+    const host = URL.parse(url)?.hostname;
+    if (host) links.push({ name: (match[1] ?? "").trim() || host, url });
   }
   return links.filter((link, index) => links.findIndex((other) => other.url === link.url) === index);
 }

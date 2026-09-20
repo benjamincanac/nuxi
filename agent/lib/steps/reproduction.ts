@@ -30,7 +30,9 @@ export function extractReproductionLinks(text: string, config: RepoConfig, setti
   const ignored = contextRepositories(config);
   const links: ReproductionLink[] = [];
   for (const match of text.matchAll(LINK_PATTERN)) {
-    const url = new URL(match[0].replace(/[.,;]+$/, ""));
+    // Reporters paste broken links. One that does not parse is not a reproduction.
+    const url = URL.parse(match[0].replace(/[.,;]+$/, ""));
+    if (!url) continue;
     const segments = url.pathname.split("/").filter(Boolean);
     const host = url.hostname.replace(/^www\./, "");
     if (host === "stackblitz.com") {
