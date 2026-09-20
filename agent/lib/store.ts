@@ -161,6 +161,8 @@ const INSTALLATIONS_KEY = "nuxi:installations";
 const QUEUE_KEY = "nuxi:queue";
 const MAX_DECISIONS = 5_000;
 const WEEK_SECONDS = 7 * 24 * 60 * 60;
+// Per issue markers outlive any run, not the issue: a year after the last write they are dead weight.
+const YEAR_SECONDS = 365 * 24 * 60 * 60;
 
 function issueKey(ref: IssueRef): string {
   return `${ref.owner}/${ref.repo}#${ref.issueNumber}`.toLowerCase();
@@ -229,7 +231,7 @@ export async function listUpstreamPairs(): Promise<UpstreamPair[]> {
 export async function markOnce(ref: IssueRef, marker: string): Promise<boolean> {
   const key = `nuxi:once:${issueKey(ref)}:${marker}`;
   if (await kv().get<number>(key)) return false;
-  await kv().set(key, Date.now());
+  await kv().set(key, Date.now(), YEAR_SECONDS);
   return true;
 }
 
@@ -248,7 +250,7 @@ export function getLastAnnounced(ref: IssueRef): Promise<string | null> {
 }
 
 export function setLastAnnounced(ref: IssueRef, fingerprint: string): Promise<void> {
-  return kv().set(`nuxi:announced:${issueKey(ref)}`, fingerprint);
+  return kv().set(`nuxi:announced:${issueKey(ref)}`, fingerprint, YEAR_SECONDS);
 }
 
 /** Backfills run the real pipeline on a repo that may have `dryRun: false`. They must not write. */
@@ -266,7 +268,7 @@ export async function isDryRunForced(ref: IssueRef): Promise<boolean> {
 export async function alreadyEvaluated(ref: IssueRef, fingerprint: string): Promise<boolean> {
   const key = `nuxi:evaluated:${issueKey(ref)}`;
   if ((await kv().get<string>(key)) === fingerprint) return true;
-  await kv().set(key, fingerprint);
+  await kv().set(key, fingerprint, YEAR_SECONDS);
   return false;
 }
 
