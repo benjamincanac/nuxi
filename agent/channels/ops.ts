@@ -7,7 +7,7 @@ import { buildDigest, digestEmbeds } from "../lib/digest";
 import { postEmbeds } from "../lib/discord";
 import { getTokenResponse } from "@vercel/connect";
 
-import { env, githubConnector, isProduction } from "../config";
+import { env, githubConnector, isProduction, requireApproval } from "../config";
 import { dispatch, drainAndDispatch } from "../lib/dispatch";
 import { gh, listOpenIssues, loadRepoConfig } from "../lib/github";
 import { openSetupPullRequest, proposeSetup } from "../lib/setup";
@@ -64,7 +64,14 @@ export default defineChannel({
         const visible = await gh(z.object({ full_name: z.string(), private: z.boolean() }), `/repos/${owner}/${repo}`).catch(
           (error: unknown) => String(error),
         );
-        return Response.json({ environment: process.env.VERCEL_ENV ?? "local", connector, token, repository: visible });
+        const raw = process.env.NUXI_REQUIRE_APPROVAL;
+        return Response.json({
+          environment: env("VERCEL_ENV") ?? "local",
+          connector,
+          token,
+          repository: visible,
+          approvals: { required: requireApproval(), raw: raw === undefined ? null : JSON.stringify(raw) },
+        });
       }
 
       // The one trigger that runs on a repository without a config, since it creates it.
