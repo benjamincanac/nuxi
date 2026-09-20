@@ -35,8 +35,9 @@ export async function refuseDuringTriage(ctx: { session: { id: string; turn: { i
 }
 
 /**
- * Who may press Approve. `NUXI_APPROVER_IDS` is a comma separated list of principal ids,
- * `discord:<guild>:<user>` or `github:<user id>`. Anyone in the channel may approve when unset.
+ * Who may press Approve. `NUXI_APPROVER_IDS` is a comma separated list of principal ids:
+ * `discord:<user>` in a direct message, `discord:<guild>:<user>` in a server, or `github:<user id>`.
+ * Anyone in the channel may approve when unset.
  */
 export function approverResponse({ responder }: { responder: { principalId: string } }) {
   const approvers = (env("NUXI_APPROVER_IDS") ?? "").split(",").map((id) => id.trim()).filter(Boolean);

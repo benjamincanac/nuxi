@@ -9,7 +9,7 @@ You need:
 - The [GitHub CLI](https://cli.github.com), logged in: `gh auth login`. The local scripts use its token.
 - A Vercel team on the Pro plan, with Vercel Sandbox available. One schedule runs every minute, which Hobby rejects at deploy time, and the build prewarms a sandbox.
 - A GitHub account where you can create a GitHub App and a repository.
-- A Discord server where you can add a bot and create channels.
+- A Discord account. A server is optional, a direct message with the app is enough.
 
 ## 1. Create the project
 
@@ -144,23 +144,34 @@ curl "$NUXI_URL/ops/decisions?repo=<you>/nuxi-playground" -H "authorization: Bea
 
 ## 8. Set up Discord
 
-Writes in production wait for an approval in a Discord channel, with Approve and Cancel buttons. Without that channel, runs that want to write are forced to dry-run: eve's GitHub channel would otherwise post the approval prompt as a public comment on the issue.
+Writes in production wait for an approval in Discord, with Approve and Cancel buttons. Without a channel to ask in, runs that want to write are forced to dry-run: eve's GitHub channel would otherwise post the approval prompt as a public comment on the issue.
 
-Create an application at <https://discord.com/developers/applications>, copy its bot token, and add the bot to your server with the `bot` and `applications.commands` scopes and the Send Messages and Embed Links permissions. Create `#nuxi-digest` and `#nuxi-approvals`, and turn on Developer Mode in Discord to copy ids.
+A server is optional. A direct message with the app works for one maintainer and is the shortest path.
 
 ```sh
-# Asks for the bot token. Creates the discord/nuxi connector, registers /ask,
-# and points the application's Interactions Endpoint URL at Connect.
+# Asks for the bot token, from an application created at
+# https://discord.com/developers/applications. Creates the discord/nuxi connector,
+# registers /ask, and points the Interactions Endpoint URL at Connect.
 # Do not pass --overwrite: the existing agent/channels/discord.ts has the maintainer check.
 pnpm eve add channel/discord
 
-vercel env add DISCORD_DIGEST_CHANNEL_ID production
+# The connector needs a token in every environment you run from, not just production.
+vercel connect attach discord/nuxi -e production -e preview -e development
+```
+
+Then install the app. In **Installation**, keep **User Install**, add the `applications.commands` scope, open the install link and add it to your account. For a server, use **Guild Install** with `bot` and `applications.commands`, Send Messages and Embed Links, and create `#nuxi-digest` and `#nuxi-approvals`.
+
+Turn on **Developer Mode** in Discord's advanced settings to copy ids. Send the app a direct message and copy the channel id of that conversation. Both channel variables can hold it.
+
+```sh
 vercel env add DISCORD_APPROVALS_CHANNEL_ID production
+vercel env add DISCORD_DIGEST_CHANNEL_ID production
 
 # Your Discord user id. Who can use /ask.
 vercel env add DISCORD_MAINTAINER_IDS production
 
-# discord:<server id>:<user id>. Who can approve. Unset, anyone who sees the channel can.
+# Who can press Approve. `discord:<user id>` in a direct message,
+# `discord:<server id>:<user id>` in a server. Unset, anyone who sees the prompt can.
 vercel env add NUXI_APPROVER_IDS production
 
 # Check
@@ -187,14 +198,19 @@ vercel connect list
 ## 10. Deploy to production
 
 ```sh
-# It has to be created after steps 3, 8 and 9: a deployment keeps the variables it was built with.
-# Pushing to main does the same once the repository is connected to the project.
+# Once the repository is connected to the Vercel project, pushing to main deploys.
+git push
+
+# Without that connection, or to deploy the working tree
 pnpm run deploy
 ```
 
+> [!IMPORTANT]
+> The production deployment has to be created after steps 3, 8 and 9. A deployment keeps the variables it was built with, and a GitHub installation token is minted for the repositories selected at that moment. Redeploy after changing either.
+
 Then, on the playground:
 
-1. Open an issue without a reproduction. Within a minute or two `#nuxi-approvals` shows the run, then an Approve prompt.
+1. Open an issue without a reproduction. Within a minute or two the approvals channel shows the run, then an Approve prompt with what it would write.
 2. Approve. The issue gets `needs reproduction`, loses `triage`, and receives one comment.
 3. Reply with a repository link. nuxi removes the label and runs again.
 4. Comment `@nuxiai can you triage this again?` on another issue.
