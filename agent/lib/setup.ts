@@ -29,6 +29,7 @@ const repoSchema = z.object({
 
 const treeSchema = z.object({ tree: z.array(z.object({ path: z.string(), type: z.string(), sha: z.string() })) });
 const labelSchema = z.object({ name: z.string() });
+const branchSchema = z.object({ name: z.string() });
 const contributorSchema = z.object({ login: z.string(), type: z.string() });
 
 const packageJsonSchema = z.object({
@@ -137,7 +138,7 @@ export async function proposeSetup(ref: RepoRef, signal?: AbortSignal): Promise<
   const [{ tree }, labels, branches] = await Promise.all([
     gh(treeSchema, `${repoPath(ref)}/git/trees/${encodeURIComponent(repo.default_branch)}?recursive=1`, options),
     gh(z.array(labelSchema), `${repoPath(ref)}/labels?per_page=100`, options),
-    gh(z.array(labelSchema), `${repoPath(ref)}/branches?per_page=100`, options),
+    gh(z.array(branchSchema), `${repoPath(ref)}/branches?per_page=100`, options),
   ]);
   const blobs = new Map(tree.filter((entry) => entry.type === "blob").map((entry) => [entry.path, entry.sha]));
   const paths = new Set(blobs.keys());
