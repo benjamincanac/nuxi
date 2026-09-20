@@ -24,11 +24,19 @@ async function queue(ctx: GitHubInboundContext, item: Omit<QueueItem, "owner" | 
   if (!isProduction()) return null;
   if (isBot(ctx.sender.login, ctx.sender.type)) return null;
   const ref = { owner: ctx.repository.owner, repo: ctx.repository.name };
-  // Before the config read, which needs a token from this very installation.
-  await noteInstallation(ref.owner, ctx.github.installationId);
   if (!(await loadRepoConfig(ref))) return null;
   await enqueue({ ...ref, ...item, notBefore: Date.now() });
   return null;
+}
+
+/**
+ * Every hook starts here, before it decides whether the event is one it acts on. An account nuxi
+ * has never minted a token for is learned from the first webhook of any kind, which is the only
+ * step installing the app on a new account takes.
+ */
+async function seen(ctx: GitHubInboundContext): Promise<void> {
+  if (!isProduction()) return;
+  await noteInstallation(ctx.repository.owner, ctx.github.installationId);
 }
 
 export default githubChannel({
@@ -37,12 +45,14 @@ export default githubChannel({
   // The eyes reaction is a write. Dry runs must leave no trace on the issue.
   progress: { reactions: false },
 
-  onIssue(ctx, issue) {
+  async onIssue(ctx, issue) {
+    await seen(ctx);
     if (issue.action !== "opened" && issue.action !== "reopened") return null;
     return queue(ctx, { issueNumber: issue.issueNumber, reason: "issue" });
   },
 
   async onComment(ctx, comment) {
+    await seen(ctx);
     const issueNumber = ctx.conversation.issueNumber;
     if (ctx.conversation.kind !== "issue" || issueNumber === null) return null;
 
@@ -61,7 +71,8 @@ export default githubChannel({
     return queue(ctx, { issueNumber, reason: "comment", commentId: comment.id });
   },
 
-  onPullRequest(ctx, pullRequest) {
+  async onPullRequest(ctx, pullRequest) {
+    await seen(ctx);
     if (pullRequest.action !== "opened" && pullRequest.action !== "edited") return null;
     return queue(ctx, { issueNumber: pullRequest.pullRequestNumber, reason: "pull_request" });
   },
