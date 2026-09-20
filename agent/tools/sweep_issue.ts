@@ -43,7 +43,7 @@ export default defineTool({
       else if (age >= mentionDays && (await once("reproduction-mention"))) {
         patch = { mentions: [{ template: "needs_reproduction_idle", detail: `No reproduction after ${Math.floor(age)} days.` }] };
       } else if (age >= followUpDays && age < mentionDays && (await once("reproduction-follow-up"))) {
-        patch = { facts: ["Friendly follow-up: a reproduction is still needed to look into this. REPRODUCTION_REQUEST is not repeated, just ask."] };
+        patch = { facts: ["Friendly follow-up: a reproduction is still needed to look into this. Ask for it in one short sentence."] };
       }
     } else if (issue.labels.includes("needs verification")) {
       const since = labeledAt("needs verification");
