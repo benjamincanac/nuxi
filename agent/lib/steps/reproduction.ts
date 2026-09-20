@@ -114,10 +114,14 @@ export async function latestPackageVersion(name: string, signal?: AbortSignal): 
   return latestSchema.parse(await response.json()).version;
 }
 
+/**
+ * Whether a retest is worth asking for: a minor or major behind, not a patch. Bug fixes ship in
+ * patches, so "you are on 4.11.0, latest is 4.11.1" is noise on almost every report.
+ */
 export function isBehind(version: string, latest: string): boolean {
   const parse = (value: string) => value.split("-")[0]?.split(".").map(Number) ?? [];
   const [a, b] = [parse(version), parse(latest)];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 2; i++) {
     if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) < (b[i] ?? 0);
   }
   return false;
