@@ -47,8 +47,10 @@ pnpm eval triage/duplicate
 # Pick Redis when asked. It holds the event queue, the decision log and the once-only markers.
 vercel integration add upstash -e production -e preview
 
-# Protects the /ops routes. Keep the value, the curl calls below need it.
-openssl rand -hex 32 | vercel env add INTERNAL_API_SECRET production,preview
+# Protects the /ops routes. Print it as well: Vercel stores it as sensitive and never shows it again,
+# and the curl calls below need it.
+export INTERNAL_API_SECRET=$(openssl rand -hex 32) && echo $INTERNAL_API_SECRET
+echo $INTERNAL_API_SECRET | vercel env add INTERNAL_API_SECRET production,preview
 
 # Check: KV_REST_API_URL, KV_REST_API_TOKEN and INTERNAL_API_SECRET, for Preview and Production.
 # None of them is a Development variable, so `vercel env pull` fetches nothing new.
@@ -241,5 +243,6 @@ pnpm backfill <owner>/<repo> --url https://<production-url>
 | `/ask` answers nothing | Your id is not in `DISCORD_MAINTAINER_IDS`. |
 | Approve does nothing | Your principal id is not in `NUXI_APPROVER_IDS`. |
 | 401 locally | `VERCEL_OIDC_TOKEN` expired, run `vercel env pull`. |
-| 403 on a GitHub write | The app lacks the permission, or is not installed on that repository. |
+| 403 on a GitHub write | The app lacks the permission. |
+| 404 on a repository the deployment reads | The app is not installed on it, or the installation does not select it. Check <https://github.com/settings/installations>. |
 | `A dev server is already running` | Delete `.eve/dev-server-state.v1.json`. |
