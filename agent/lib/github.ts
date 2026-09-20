@@ -62,21 +62,45 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
+/** Seconds to wait when GitHub asks us to slow down, or `null` when the response is not a rate limit. */
+function retryAfterSeconds(response: Response): number | null {
+  if (response.status !== 403 && response.status !== 429) return null;
+  const retryAfter = Number(response.headers.get("retry-after"));
+  if (Number.isFinite(retryAfter) && retryAfter > 0) return Math.min(retryAfter, 120);
+  // Primary limits report a reset timestamp and a remaining count of zero.
+  if (response.headers.get("x-ratelimit-remaining") !== "0") return null;
+  const reset = Number(response.headers.get("x-ratelimit-reset"));
+  if (!Number.isFinite(reset)) return 60;
+  return Math.min(Math.max(Math.ceil(reset - Date.now() / 1000), 1), 120);
+}
+
+const MAX_RATE_LIMIT_RETRIES = 3;
+
+/**
+ * One GitHub request, retried when GitHub rate limits us. Search allows 30 requests a minute,
+ * which a backlog pass reaches quickly, and it answers 403 rather than 429.
+ */
 async function rawRequest(path: string, options: RequestOptions = {}): Promise<Response> {
-  const token = await githubToken(options.owner);
-  const response = await fetch(`https://api.github.com${path}`, {
-    method: options.method ?? "GET",
-    headers: {
-      accept: options.accept ?? "application/vnd.github+json",
-      authorization: `Bearer ${token}`,
-      "x-github-api-version": "2022-11-28",
-      "user-agent": "nuxi-triage",
-      ...(options.body === undefined ? {} : { "content-type": "application/json" }),
-    },
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    signal: options.signal,
-  });
-  return response;
+  for (let attempt = 0; ; attempt++) {
+    const token = await githubToken(options.owner);
+    const response = await fetch(`https://api.github.com${path}`, {
+      method: options.method ?? "GET",
+      headers: {
+        accept: options.accept ?? "application/vnd.github+json",
+        authorization: `Bearer ${token}`,
+        "x-github-api-version": "2022-11-28",
+        "user-agent": "nuxi-triage",
+        ...(options.body === undefined ? {} : { "content-type": "application/json" }),
+      },
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      signal: options.signal,
+    });
+
+    const wait = attempt < MAX_RATE_LIMIT_RETRIES ? retryAfterSeconds(response) : null;
+    if (wait === null) return response;
+    await new Promise((resolve) => setTimeout(resolve, wait * 1000));
+    options.signal?.throwIfAborted();
+  }
 }
 
 export async function gh<T extends z.ZodType>(
