@@ -1,6 +1,6 @@
 # nuxi
 
-An [eve](https://eve.dev) agent that triages GitHub issues. It runs as the `nuxi[bot]` GitHub App through [Vercel Connect](https://vercel.com/docs/connect) and moves issues out of `triage` by taking one decision per issue.
+An [eve](https://eve.dev) agent that triages GitHub issues. It runs as the `nuxiai[bot]` GitHub App through [Vercel Connect](https://vercel.com/docs/connect) and moves issues out of `triage` by taking one decision per issue.
 
 It never closes, transfers or converts an issue, and never removes a label a human applied. Anything irreversible is handed to the maintainers with an @-mention.
 

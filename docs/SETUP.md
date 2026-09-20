@@ -102,6 +102,8 @@ In the form, keep **Managed**, pick your account as the namespace, and leave **T
 | `workflows` | write | Removing the workflows nuxi replaces, in the setup pull request |
 | `metadata` | read | Required by GitHub |
 
+Set **App Name** to the GitHub App slug you want, `nuxiai` here. It has to be free across GitHub users, organizations and apps, and it is what people mention and what comments are signed with, `@nuxiai` and `nuxiai[bot]`. Keep **Connector Name** as the UID the code looks up, `nuxi-preview` or `nuxi`. Then match `BOT_NAME` in [`agent/channels/github.ts`](../agent/channels/github.ts).
+
 GitHub then asks where to install the app. Pick **Only select repositories** and the playground.
 
 Only `issues` write is used by triage. The rest is for the setup pull request of step 11. If you plan to write `.github/nuxi.yml` by hand, `pull_requests` and `contents` on read are enough and `workflows` is not needed.
@@ -195,7 +197,7 @@ Then, on the playground:
 1. Open an issue without a reproduction. Within a minute or two `#nuxi-approvals` shows the run, then an Approve prompt.
 2. Approve. The issue gets `needs reproduction`, loses `triage`, and receives one comment.
 3. Reply with a repository link. nuxi removes the label and runs again.
-4. Comment `@nuxi can you triage this again?` on another issue.
+4. Comment `@nuxiai can you triage this again?` on another issue.
 5. In Discord, `/ask message: what's waiting on me?`.
 
 ```sh

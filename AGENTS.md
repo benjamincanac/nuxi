@@ -1,6 +1,6 @@
 # nuxi
 
-An [eve](https://eve.dev) agent that triages GitHub issues as the `nuxi[bot]` GitHub App. [`README.md`](README.md) explains the design, [`docs/SETUP.md`](docs/SETUP.md) how to deploy it.
+An [eve](https://eve.dev) agent that triages GitHub issues as the `nuxiai[bot]` GitHub App. [`README.md`](README.md) explains the design, [`docs/SETUP.md`](docs/SETUP.md) how to deploy it.
 
 ## Rules
 
