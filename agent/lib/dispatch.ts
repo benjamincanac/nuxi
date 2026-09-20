@@ -14,6 +14,11 @@ function target(item: QueueItem): string {
   return `${item.owner}/${item.repo}#${item.issueNumber}`;
 }
 
+/** `/issues/<n>` also resolves a pull request, so one form covers both. */
+export function targetUrl(item: QueueItem): string {
+  return `https://github.com/${item.owner}/${item.repo}/issues/${item.issueNumber}`;
+}
+
 const mentionQuestions = {
   is_triage_request: {
     type: "boolean",
@@ -134,7 +139,8 @@ export async function dispatch(to: ScheduleToFn, auth: Auth, item: QueueItem): P
   const message = triagePrompt(item, config, triageRequested);
 
   if (needsApproval && approvals) {
-    await to(discord, { channelId: approvals, initialMessage: `Triage ${target(item)} (${item.reason})` }).send(message, { auth });
+    const title = `Triage [${target(item)}](<${targetUrl(item)}>) (${item.reason})`;
+    await to(discord, { channelId: approvals, initialMessage: title }).send(message, { auth });
     return "discord";
   }
 
