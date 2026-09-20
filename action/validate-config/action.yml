@@ -37,4 +37,7 @@ runs:
     - name: Validate config
       shell: bash
       working-directory: ${{ github.action_path }}/../..
-      run: pnpm exec tsx scripts/validate-config.ts "${{ github.workspace }}/${{ inputs.path }}"
+      # Through the environment: an expression inside `run` is expanded before the shell parses the line.
+      env:
+        CONFIG_PATH: ${{ github.workspace }}/${{ inputs.path }}
+      run: pnpm exec tsx scripts/validate-config.ts "$CONFIG_PATH"
