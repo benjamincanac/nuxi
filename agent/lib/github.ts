@@ -1,4 +1,4 @@
-import { getToken } from "@vercel/connect";
+import { deleteTokenCacheEntry, getToken, type ConnectTokenParams } from "@vercel/connect";
 import { z } from "zod";
 
 import {
@@ -35,15 +35,36 @@ function connectInstallationId(owner: string): string | undefined {
   return parsed.success ? parsed.data[owner] : undefined;
 }
 
+function tokenParams(owner?: string): ConnectTokenParams {
+  const installationId = owner ? connectInstallationId(owner) : undefined;
+  return { subject: { type: "app" }, ...(installationId ? { installationId } : {}) };
+}
+
 export async function githubToken(owner?: string): Promise<string> {
   // Scripts run outside Vercel and may use a personal token instead of Connect.
   const script = env("NUXI_SCRIPT_TOKEN");
   if (script) return script;
-  const installationId = owner ? connectInstallationId(owner) : undefined;
-  return getToken(githubConnector(), {
-    subject: { type: "app" },
-    ...(installationId ? { installationId } : {}),
-  });
+  return getToken(githubConnector(), tokenParams(owner));
+}
+
+const REFRESH_COOLDOWN_MS = 10 * 60_000;
+const lastRefresh = new Map<string, number>();
+
+/**
+ * An installation token is scoped to the repositories selected when it was minted, and Connect
+ * caches it for its lifetime. Adding a repository to the installation would otherwise answer 404
+ * until the cache expired or the deployment was replaced. A missing file is a 404 too, and nuxi
+ * reads a config file from every repository it looks at, so this runs at most once per owner
+ * per cooldown and returns false the rest of the time.
+ */
+function forgetToken(owner?: string): boolean {
+  if (env("NUXI_SCRIPT_TOKEN")) return false;
+  const key = owner ?? "";
+  const previous = lastRefresh.get(key) ?? 0;
+  if (Date.now() - previous < REFRESH_COOLDOWN_MS) return false;
+  lastRefresh.set(key, Date.now());
+  deleteTokenCacheEntry(githubConnector(), tokenParams(owner));
+  return true;
 }
 
 export class GitHubRequestError extends Error {
@@ -83,6 +104,7 @@ const MAX_RATE_LIMIT_RETRIES = 3;
  * which a backlog pass reaches quickly, and it answers 403 rather than 429.
  */
 async function rawRequest(path: string, options: RequestOptions = {}): Promise<Response> {
+  let refreshed = false;
   for (let attempt = 0; ; attempt++) {
     const token = await githubToken(options.owner);
     const response = await fetch(`https://api.github.com${path}`, {
@@ -97,6 +119,12 @@ async function rawRequest(path: string, options: RequestOptions = {}): Promise<R
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: options.signal,
     });
+
+    // A 404 on a repository the app was just added to means the cached token predates the change.
+    if (response.status === 404 && !refreshed) {
+      refreshed = true;
+      if (forgetToken(options.owner)) continue;
+    }
 
     const wait = attempt < MAX_RATE_LIMIT_RETRIES ? retryAfterSeconds(response) : null;
     if (wait === null) return response;
