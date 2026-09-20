@@ -24,7 +24,7 @@ async function describeWrite(input: unknown, runId: string): Promise<string> {
   const { owner, repo, issueNumber, comment } = parsed.data;
   const ref = { owner, repo, issueNumber };
   const context = await loadTriageContext(ref).catch(() => null);
-  const plan = (await getPlan(runId, ref)) ?? emptyPlan(ref, runId, true);
+  const plan = (await getPlan(ref)) ?? emptyPlan(ref, runId, true);
 
   const lines = [`**[${owner}/${repo}#${issueNumber}](<https://github.com/${owner}/${repo}/issues/${issueNumber}>)**`];
   if (plan.setType) lines.push(`Type: ${plan.setType}`);

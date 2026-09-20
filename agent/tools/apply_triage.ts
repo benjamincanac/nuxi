@@ -21,7 +21,7 @@ export default defineTool({
   label: { start: ({ owner, repo, issueNumber }) => `Apply triage to ${owner}/${repo}#${issueNumber}` },
   async execute({ comment, ...ref }, ctx) {
     const context = await requireContext(ref, ctx.abortSignal);
-    const recorded = await getPlan(runId(ctx), ref);
+    const recorded = await getPlan(ref);
     // Without a plan no tool evaluated the skip rules for this run, so they are evaluated here.
     // The activity guard is off: this path answers an explicit @-mention.
     const plan = recorded ?? { ...emptyPlan(ref, runId(ctx), context.config.dryRun), skipped: skipReason(context, true) };

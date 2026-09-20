@@ -6,7 +6,7 @@ import github from "../channels/github";
 import { requireApproval, type RepoConfig } from "../config";
 import { loadRepoConfig, repositoryId } from "./github";
 import { ask, clip } from "./jev";
-import { allowPreviewWrite, drainQueue, enqueue, forceDryRun, markOnce, type QueueItem, type QueueReason } from "./store";
+import { allowPreviewWrite, clearPlan, drainQueue, enqueue, forceDryRun, markOnce, type QueueItem, type QueueReason } from "./store";
 
 type Auth = Parameters<ReturnType<ScheduleToFn>["send"]>[1]["auth"];
 
@@ -117,6 +117,8 @@ export async function drainAndDispatch(to: ScheduleToFn, auth: Auth, limit: numb
 export async function dispatch(to: ScheduleToFn, auth: Auth, item: QueueItem): Promise<"discord" | "github" | "disabled" | "skipped"> {
   const config = await loadRepoConfig(item);
   if (!config) return "disabled";
+  // The plan lives under the issue, so the run starts from nothing rather than from the last one.
+  await clearPlan(item);
   if (item.explicit) await allowPreviewWrite(item);
 
   const approvals = config.discord.approvalsChannel;

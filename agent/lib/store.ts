@@ -179,13 +179,22 @@ export function listDecisions(): Promise<DecisionRecord[]> {
   return kv().lrange<DecisionRecord>(DECISIONS_KEY, 0, -1);
 }
 
-export function getPlan(runId: string, ref: IssueRef): Promise<TriagePlan | null> {
-  return kv().get<TriagePlan>(`nuxi:plan:${runId}:${issueKey(ref)}`);
+/**
+ * The plan is keyed by issue, not by turn. An approval resumes the original tool call in a new turn,
+ * so a turn scoped plan is gone by the time `apply_triage` runs and the write would be empty.
+ * `dispatch` clears the key before each run, which is what keeps one plan per run.
+ */
+export function getPlan(ref: IssueRef): Promise<TriagePlan | null> {
+  return kv().get<TriagePlan>(`nuxi:plan:${issueKey(ref)}`);
 }
 
 export async function savePlan(runId: string, plan: TriagePlan): Promise<void> {
-  await kv().set(`nuxi:plan:${runId}:${issueKey(plan.issue)}`, plan, WEEK_SECONDS);
+  await kv().set(`nuxi:plan:${issueKey(plan.issue)}`, plan, WEEK_SECONDS);
   await kv().set(`nuxi:run:${runId}`, true, WEEK_SECONDS);
+}
+
+export async function clearPlan(ref: IssueRef): Promise<void> {
+  await kv().del(`nuxi:plan:${issueKey(ref)}`);
 }
 
 /** Whether this run is a triage run, meaning a tool has already recorded a plan for it. */

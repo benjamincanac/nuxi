@@ -13,7 +13,7 @@ export default defineTool({
   label: { start: ({ owner, repo, issueNumber }) => `Run reproduction of ${owner}/${repo}#${issueNumber}` },
   async execute(ref, ctx) {
     const context = await requireContext(ref, ctx.abortSignal);
-    const plan = await getPlan(runId(ctx), ref);
+    const plan = await getPlan(ref);
     const latestVersion =
       plan?.latestVersion ??
       context.fixture?.latestVersion ??

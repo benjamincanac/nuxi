@@ -135,7 +135,7 @@ export async function updatePlan(
   step: string,
   patch: PlanPatch,
 ): Promise<TriagePlan> {
-  const current = (await getPlan(runId, issue)) ?? emptyPlan(issue, runId, dryRun);
+  const current = (await getPlan(issue)) ?? emptyPlan(issue, runId, dryRun);
   const next = mergePlan(current, step, patch);
   await savePlan(runId, next);
   return next;

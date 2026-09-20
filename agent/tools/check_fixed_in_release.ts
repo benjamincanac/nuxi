@@ -12,7 +12,7 @@ export default defineTool({
   label: { start: ({ owner, repo, issueNumber }) => `Check releases for a fix of ${owner}/${repo}#${issueNumber}` },
   async execute(ref, ctx) {
     const context = await requireContext(ref, ctx.abortSignal);
-    const plan = await getPlan(runId(ctx), ref);
+    const plan = await getPlan(ref);
     const areaSlugs = knownAreas(context, plan?.areas ?? []);
 
     const outcome = await checkFixedInRelease(context, areaSlugs, plan?.sandbox ?? null, ctx.abortSignal);
