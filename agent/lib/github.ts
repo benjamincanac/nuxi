@@ -348,6 +348,19 @@ export function getTimeline(ref: IssueRef, signal?: AbortSignal): Promise<Timeli
   );
 }
 
+const repoIdSchema = z.object({ id: z.number() });
+const repoIdCache = new Map<string, number>();
+
+/** Numeric id of a repository, cached. Lets a caller skip a metadata lookup. */
+export async function repositoryId(ref: RepoRef, signal?: AbortSignal): Promise<number> {
+  const key = `${ref.owner}/${ref.repo}`.toLowerCase();
+  const cached = repoIdCache.get(key);
+  if (cached !== undefined) return cached;
+  const { id } = await gh(repoIdSchema, `/repos/${ref.owner}/${ref.repo}`, { owner: ref.owner, signal });
+  repoIdCache.set(key, id);
+  return id;
+}
+
 export function isBot(login: string, type: string): boolean {
   return type === "Bot" || login.endsWith("[bot]");
 }

@@ -5,9 +5,11 @@ import { z } from "zod";
 
 import { buildDigest, digestEmbeds } from "../lib/digest";
 import { postEmbeds } from "../lib/discord";
-import { isProduction } from "../config";
+import { getTokenResponse } from "@vercel/connect";
+
+import { githubConnector, isProduction } from "../config";
 import { dispatch, drainAndDispatch } from "../lib/dispatch";
-import { listOpenIssues, loadRepoConfig } from "../lib/github";
+import { gh, listOpenIssues, loadRepoConfig } from "../lib/github";
 import { openSetupPullRequest, proposeSetup } from "../lib/setup";
 import { DISPATCH_BATCH, sweepRepo } from "../lib/sweep";
 import { enqueue, listDecisions } from "../lib/store";
@@ -49,6 +51,21 @@ export default defineChannel({
       if (!body.success) return Response.json({ error: z.prettifyError(body.error) }, { status: 400 });
 
       const [owner = "", repo = ""] = body.data.repo.split("/");
+
+      // Reports what the deployment's GitHub credentials can actually see. For setup and support.
+      if (params.id === "check") {
+        const connector = githubConnector();
+        // Never return the token itself, only what identifies it.
+        const minted = await getTokenResponse(connector, { subject: { type: "app" } }).catch((error: unknown) => String(error));
+        const token =
+          typeof minted === "string"
+            ? minted
+            : { installationId: minted.installationId, expiresAt: new Date(minted.expiresAt).toISOString() };
+        const visible = await gh(z.object({ full_name: z.string(), private: z.boolean() }), `/repos/${owner}/${repo}`).catch(
+          (error: unknown) => String(error),
+        );
+        return Response.json({ environment: process.env.VERCEL_ENV ?? "local", connector, token, repository: visible });
+      }
 
       // The one trigger that runs on a repository without a config, since it creates it.
       if (params.id === "setup") {
@@ -94,7 +111,7 @@ export default defineChannel({
           return Response.json(digest);
         }
         default:
-          return Response.json({ error: `Unknown trigger ${params.id}`, available: ["triage", "sweep", "backfill", "digest", "setup"] }, { status: 404 });
+          return Response.json({ error: `Unknown trigger ${params.id}`, available: ["triage", "sweep", "backfill", "digest", "setup", "check"] }, { status: 404 });
       }
     }),
 

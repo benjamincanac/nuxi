@@ -4,7 +4,7 @@ import type { ScheduleToFn } from "eve/schedules";
 import discord from "../channels/discord";
 import github from "../channels/github";
 import { requireApproval, type RepoConfig } from "../config";
-import { loadRepoConfig } from "./github";
+import { loadRepoConfig, repositoryId } from "./github";
 import { ask, clip } from "./jev";
 import { allowPreviewWrite, drainQueue, enqueue, forceDryRun, markOnce, type QueueItem, type QueueReason } from "./store";
 
@@ -139,6 +139,8 @@ export async function dispatch(to: ScheduleToFn, auth: Auth, item: QueueItem): P
   }
 
   const number = item.reason === "pull_request" ? { pullRequestNumber: item.issueNumber } : { issueNumber: item.issueNumber };
-  await to(github, { owner: item.owner, repo: item.repo, ...number }).send(message, { auth });
+  // `repositoryId` saves eve a metadata lookup of its own when it opens the thread.
+  const id = await repositoryId(item).catch(() => undefined);
+  await to(github, { owner: item.owner, repo: item.repo, ...number, ...(id ? { repositoryId: id } : {}) }).send(message, { auth });
   return "github";
 }
