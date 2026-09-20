@@ -303,7 +303,9 @@ const installationRepositoriesSchema = z.object({
 /** Repositories the app installation can access. A repo without a valid config file is ignored later. */
 export async function listInstalledRepositories(signal?: AbortSignal): Promise<RepoRef[]> {
   const result = await gh(installationRepositoriesSchema, "/installation/repositories?per_page=100", { signal });
-  return result.repositories.filter((repo) => !repo.archived).map((repo) => ({ owner: repo.owner.login, repo: repo.name }));
+  return result.repositories
+    .filter((repo) => !repo.archived && isAllowedOwner(repo.owner.login))
+    .map((repo) => ({ owner: repo.owner.login, repo: repo.name }));
 }
 
 /** Installed repositories with a valid `.github/nuxi.yml`. */
@@ -442,8 +444,19 @@ const configCache = new Map<string, { expires: number; value: RepoConfig | null 
 const areaCache = new Map<string, { expires: number; value: Area[] }>();
 
 /** Returns `null` when the file is missing or invalid, which disables triage for the repo. */
+/**
+ * A GitHub App that has to be installable on another organization is public, so anyone can install
+ * it. `NUXI_ALLOWED_OWNERS` lists the accounts nuxi answers to, and everything else is ignored as if
+ * it had no config file. Unset, every installation is answered, which is what a private app wants.
+ */
+function isAllowedOwner(owner: string): boolean {
+  const allowed = (env("NUXI_ALLOWED_OWNERS") ?? "").split(",").map((name) => name.trim().toLowerCase()).filter(Boolean);
+  return allowed.length === 0 || allowed.includes(owner.toLowerCase());
+}
+
 export async function loadRepoConfig(ref: RepoRef, signal?: AbortSignal): Promise<RepoConfig | null> {
   const key = `${ref.owner}/${ref.repo}`.toLowerCase();
+  if (!isAllowedOwner(ref.owner)) return null;
   const cached = configCache.get(key);
   if (cached && cached.expires > Date.now()) return cached.value;
 

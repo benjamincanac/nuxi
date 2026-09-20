@@ -195,6 +195,14 @@ vercel connect attach github/nuxi -e production --triggers --trigger-path /eve/v
 vercel connect list
 ```
 
+> [!IMPORTANT]
+> An app you want to install on an organization you do not own has to be public, so anyone can install it. Two variables keep it yours. `NUXI_ALLOWED_OWNERS` lists the GitHub accounts nuxi answers to and every other installation is ignored. `NUXI_AUTO_SETUP=false` stops the daily sweep from opening a setup pull request on a repository you did not ask for. They cannot live in `.github/nuxi.yml`, since whoever installs the app writes that file.
+
+```sh
+vercel env add NUXI_ALLOWED_OWNERS production
+vercel env add NUXI_AUTO_SETUP production
+```
+
 ## 10. Deploy to production
 
 ```sh
