@@ -306,8 +306,8 @@ export async function openSetupPullRequest(ref: RepoRef, signal?: AbortSignal): 
   const pull = await gh(pullSchema, `${repoPath(ref)}/pulls`, {
     ...options,
     method: "POST",
-    // Same subject as the commit that adds the file, in the conventional style most repositories use.
-    body: { title: "chore(github): add nuxi triage config", head: SETUP_BRANCH, base: proposal.defaultBranch, body: setupPullRequestBody(proposal, manual) },
+    // The pull request does more than add the file, so it is not the commit's subject.
+    body: { title: "chore(github): set up nuxi triage", head: SETUP_BRANCH, base: proposal.defaultBranch, body: setupPullRequestBody(proposal, manual) },
   });
 
   return {
