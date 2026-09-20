@@ -5,7 +5,7 @@ import { applyPlan, countWords, MAX_COMMENT_WORDS, reproductionRequest } from ".
 import { skipReason } from "../lib/context";
 import { emptyPlan, hasWrites } from "../lib/plan";
 import { getPlan } from "../lib/store";
-import { approverResponse, issueInput, requireContext, runId, writeApproval } from "../lib/tool";
+import { issueInput, requireContext, runId, writeApproval } from "../lib/tool";
 
 export default defineTool({
   description:
@@ -17,7 +17,7 @@ export default defineTool({
         `The comment for the reporter, in English, friendly maintainer tone, under ${MAX_COMMENT_WORDS} words, conveying the plan's facts and nothing else. Empty string when the plan has no facts. The reproduction request and the maintainer mention are appended automatically, do not write them.`,
       ),
   }),
-  approval: { request: writeApproval, response: approverResponse },
+  approval: { request: writeApproval },
   label: { start: ({ owner, repo, issueNumber }) => `Apply triage to ${owner}/${repo}#${issueNumber}` },
   async execute({ comment, ...ref }, ctx) {
     const context = await requireContext(ref, ctx.abortSignal);

@@ -1,7 +1,7 @@
 import type { ApprovalContext, ApprovalStatus } from "eve/tools/approval";
 import { z } from "zod";
 
-import { env, requireApproval } from "../config";
+import { requireApproval } from "../config";
 import { FIXTURE_OWNER, loadTriageContext, type TriageContext } from "./context";
 import { loadRepoConfig, type IssueRef } from "./github";
 import { isDryRunForced, isTriageRun } from "./store";
@@ -32,17 +32,6 @@ export async function refuseDuringTriage(ctx: { session: { id: string; turn: { i
   if (await isTriageRun(runId(ctx))) {
     throw new Error("Not available during a triage run. Follow the triage skill and finish with apply_triage.");
   }
-}
-
-/**
- * Who may press Approve. `NUXI_APPROVER_IDS` is a comma separated list of principal ids:
- * `discord:<user>` in a direct message, `discord:<guild>:<user>` in a server, or `github:<user id>`.
- * Anyone in the channel may approve when unset.
- */
-export function approverResponse({ responder }: { responder: { principalId: string } }) {
-  const approvers = (env("NUXI_APPROVER_IDS") ?? "").split(",").map((id) => id.trim()).filter(Boolean);
-  if (approvers.length === 0 || approvers.includes(responder.principalId)) return { status: "allowed" as const };
-  return { status: "rejected" as const, reason: "Only a maintainer can approve triage writes." };
 }
 
 /** Pauses for a maintainer before a real write. Dry runs write nothing, so they never ask. */

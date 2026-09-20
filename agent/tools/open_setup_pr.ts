@@ -2,7 +2,6 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 
 import { isProduction } from "../config";
-import { approverResponse } from "../lib/tool";
 import { openSetupPullRequest, proposeSetup } from "../lib/setup";
 
 export default defineTool({
@@ -14,7 +13,7 @@ export default defineTool({
     preview: z.boolean().default(false).describe("Return the proposed config and workflow changes without opening the pull request."),
   }),
   // A pull request is reviewable, but it still lands in someone's notifications.
-  approval: { request: ({ toolInput }) => (toolInput?.preview ? "not-applicable" : "user-approval"), response: approverResponse },
+  approval: { request: ({ toolInput }) => (toolInput?.preview ? "not-applicable" : "user-approval") },
   label: { start: ({ owner, repo, preview }) => `${preview ? "Preview" : "Open"} setup pull request for ${owner}/${repo}` },
   async execute({ owner, repo, preview }, ctx) {
     if (preview || !isProduction()) {

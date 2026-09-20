@@ -170,13 +170,12 @@ vercel env add DISCORD_DIGEST_CHANNEL_ID production
 # Your Discord user id. Who can use /ask.
 vercel env add DISCORD_MAINTAINER_IDS production
 
-# Who can press Approve. `discord:<user id>` in a direct message,
-# `discord:<server id>:<user id>` in a server. Unset, anyone who sees the prompt can.
-vercel env add NUXI_APPROVER_IDS production
-
 # Check
 vercel connect list
 ```
+
+> [!NOTE]
+> Anyone who sees the approvals channel can press Approve. Discord does not tell eve who pressed a button, so the channel is the only guard. Keep it a direct message or a private channel.
 
 ## 9. Create the production GitHub app
 
@@ -267,7 +266,7 @@ pnpm backfill <owner>/<repo> --url https://<production-url>
 | Nothing happens after opening an issue | No valid `.github/nuxi.yml` on the default branch, check with `pnpm validate-config`. Or the connector was created without the `issues` event. |
 | `"dryRun": true` though the file says `false` | No approvals channel is set, or the run came from a preview. |
 | `/ask` answers nothing | Your id is not in `DISCORD_MAINTAINER_IDS`. |
-| Approve does nothing | Your principal id is not in `NUXI_APPROVER_IDS`. |
+| Approve does nothing | The session expired. Runs park for 10 minutes. Trigger the issue again. |
 | `nuxi didn't respond in time` on Approve | The application's Interactions Endpoint URL is empty. Editing the application in Discord's portal clears it. Set it back to the connector's trigger URL, `https://connect.vercel.com/trigger/<connector id>`. |
 | 401 locally | `VERCEL_OIDC_TOKEN` expired, run `vercel env pull`. |
 | 403 on a GitHub write | The app lacks the permission. |
