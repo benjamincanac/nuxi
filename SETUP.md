@@ -102,7 +102,7 @@ In the form, keep **Managed**, pick your account as the namespace, and leave **T
 | `workflows` | write | Removing the workflows nuxi replaces, in the setup pull request |
 | `metadata` | read | Required by GitHub |
 
-Set **App Name** to the GitHub App slug you want, `nuxiai` here. It has to be free across GitHub users, organizations and apps, and it is what people mention and what comments are signed with, `@nuxiai` and `nuxiai[bot]`. Keep **Connector Name** as the UID the code looks up, `nuxi-preview` or `nuxi`. Then match `BOT_NAME` in [`agent/channels/github.ts`](../agent/channels/github.ts).
+Set **App Name** to the GitHub App slug you want, `nuxiai` here. It has to be free across GitHub users, organizations and apps, and it is what people mention and what comments are signed with, `@nuxiai` and `nuxiai[bot]`. Keep **Connector Name** as the UID the code looks up, `nuxi-preview` or `nuxi`. Then match `BOT_NAME` in [`agent/channels/github.ts`](agent/channels/github.ts).
 
 GitHub then asks where to install the app. Pick **Only select repositories** and the playground.
 

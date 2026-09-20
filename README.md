@@ -4,7 +4,7 @@ An [eve](https://eve.dev) agent that triages GitHub issues. It runs as the `nuxi
 
 It never closes, transfers or converts an issue, and never removes a label a human applied. Anything irreversible is handed to the maintainers with an @-mention.
 
-To deploy it, follow [`docs/SETUP.md`](docs/SETUP.md).
+To deploy it, follow [`SETUP.md`](SETUP.md).
 
 ## How it works
 
