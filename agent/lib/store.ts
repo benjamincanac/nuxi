@@ -211,8 +211,10 @@ export function rememberInstallation(owner: string, installationId: number | str
   return kv().hset(INSTALLATIONS_KEY, owner.toLowerCase(), String(installationId));
 }
 
-export function listInstallations(): Promise<Record<string, string>> {
-  return kv().hgetall<string>(INSTALLATIONS_KEY);
+export async function listInstallations(): Promise<Record<string, string>> {
+  // Redis parses a stored id back as a number, and Connect only accepts a string.
+  const stored = await kv().hgetall<string | number>(INSTALLATIONS_KEY);
+  return Object.fromEntries(Object.entries(stored).map(([owner, id]) => [owner, String(id)]));
 }
 
 export function trackUpstreamPair(pair: UpstreamPair): Promise<void> {
