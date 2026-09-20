@@ -1,6 +1,6 @@
 import { defineSchedule } from "eve/schedules";
 
-import { isProduction } from "../config";
+import { env, isProduction } from "../config";
 import { listEnabledRepositories, listInstalledRepositories } from "../lib/github";
 import { openSetupPullRequest } from "../lib/setup";
 import { sweepRepo } from "../lib/sweep";
@@ -31,7 +31,7 @@ export default defineSchedule({
           console.log("[nuxi] sweep", JSON.stringify(summary));
         }
 
-        if (process.env.NUXI_AUTO_SETUP === "false") return;
+        if (env("NUXI_AUTO_SETUP") === "false") return;
         const installed = await listInstalledRepositories();
         if (installed.length > AUTO_SETUP_MAX_REPOSITORIES) return;
         for (const ref of installed) {

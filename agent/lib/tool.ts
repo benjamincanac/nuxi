@@ -1,7 +1,7 @@
 import type { ApprovalContext, ApprovalStatus } from "eve/tools/approval";
 import { z } from "zod";
 
-import { requireApproval } from "../config";
+import { env, requireApproval } from "../config";
 import { FIXTURE_OWNER, loadTriageContext, type TriageContext } from "./context";
 import { loadRepoConfig, type IssueRef } from "./github";
 import { isDryRunForced } from "./store";
@@ -29,7 +29,7 @@ export async function requireContext(ref: IssueRef, signal?: AbortSignal): Promi
  * `discord:<guild>:<user>` or `github:<user id>`. Anyone in the channel may approve when unset.
  */
 export function approverResponse({ responder }: { responder: { principalId: string } }) {
-  const approvers = (process.env.NUXI_APPROVER_IDS ?? "").split(",").map((id) => id.trim()).filter(Boolean);
+  const approvers = (env("NUXI_APPROVER_IDS") ?? "").split(",").map((id) => id.trim()).filter(Boolean);
   if (approvers.length === 0 || approvers.includes(responder.principalId)) return { status: "allowed" as const };
   return { status: "rejected" as const, reason: "Only a maintainer can approve triage writes." };
 }

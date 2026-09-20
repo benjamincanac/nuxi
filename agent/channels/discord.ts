@@ -1,9 +1,10 @@
 import { defaultDiscordAuth, discordChannel } from "eve/channels/discord";
 
+import { env } from "../config";
 import { discordCredentials } from "../lib/discord";
 
 function maintainerIds(): string[] {
-  return (process.env.DISCORD_MAINTAINER_IDS ?? "").split(",").map((id) => id.trim()).filter(Boolean);
+  return (env("DISCORD_MAINTAINER_IDS") ?? "").split(",").map((id) => id.trim()).filter(Boolean);
 }
 
 /**

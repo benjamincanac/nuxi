@@ -7,7 +7,7 @@ import { buildDigest, digestEmbeds } from "../lib/digest";
 import { postEmbeds } from "../lib/discord";
 import { getTokenResponse } from "@vercel/connect";
 
-import { githubConnector, isProduction } from "../config";
+import { env, githubConnector, isProduction } from "../config";
 import { dispatch, drainAndDispatch } from "../lib/dispatch";
 import { gh, listOpenIssues, loadRepoConfig } from "../lib/github";
 import { openSetupPullRequest, proposeSetup } from "../lib/setup";
@@ -31,7 +31,7 @@ const triggerBody = z.object({
 });
 
 function authorized(request: Request): boolean {
-  const secret = process.env.INTERNAL_API_SECRET;
+  const secret = env("INTERNAL_API_SECRET");
   const header = request.headers.get("authorization") ?? "";
   if (!secret || !header.startsWith("Bearer ")) return false;
   const given = Buffer.from(header.slice(7));

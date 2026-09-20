@@ -1,3 +1,4 @@
+import { env } from "../config";
 import {
   experimental_evaluate as evaluate,
   type Experimental_EvaluationQuestion as Question,
@@ -6,7 +7,7 @@ import {
 
 /** Resolved through AI Gateway. */
 export function jevModel(): string {
-  return process.env.JEV_MODEL ?? "typesafe-ai/jev";
+  return env("JEV_MODEL") ?? "typesafe-ai/jev";
 }
 
 export async function ask<const Q extends Record<string, Question>>(

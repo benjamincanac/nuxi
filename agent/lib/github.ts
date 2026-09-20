@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   CONFIG_PATH,
+  env,
   githubConnector,
   parseRepoConfig,
   resolveRepoConfig,
@@ -28,7 +29,7 @@ const connectInstallations = z.record(z.string(), z.string());
  * installed on more than one account and the default installation is not the right one.
  */
 function connectInstallationId(owner: string): string | undefined {
-  const raw = process.env.GITHUB_CONNECT_INSTALLATIONS;
+  const raw = env("GITHUB_CONNECT_INSTALLATIONS");
   if (!raw) return undefined;
   const parsed = connectInstallations.safeParse(JSON.parse(raw));
   return parsed.success ? parsed.data[owner] : undefined;
@@ -36,7 +37,8 @@ function connectInstallationId(owner: string): string | undefined {
 
 export async function githubToken(owner?: string): Promise<string> {
   // Scripts run outside Vercel and may use a personal token instead of Connect.
-  if (process.env.NUXI_SCRIPT_TOKEN) return process.env.NUXI_SCRIPT_TOKEN;
+  const script = env("NUXI_SCRIPT_TOKEN");
+  if (script) return script;
   const installationId = owner ? connectInstallationId(owner) : undefined;
   return getToken(githubConnector(), {
     subject: { type: "app" },
@@ -307,7 +309,7 @@ export async function listInstalledRepositories(signal?: AbortSignal): Promise<R
 /** Installed repositories with a valid `.github/nuxi.yml`. */
 export async function listEnabledRepositories(signal?: AbortSignal): Promise<RepoConfig[]> {
   // Public repos can be followed read-only before the app is installed on them.
-  const extra = (process.env.NUXI_EXTRA_REPOS ?? "")
+  const extra = (env("NUXI_EXTRA_REPOS") ?? "")
     .split(",")
     .map((slug) => slug.trim().split("/"))
     .filter((parts): parts is [string, string] => parts.length === 2 && Boolean(parts[0]) && Boolean(parts[1]))

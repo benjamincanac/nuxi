@@ -158,9 +158,9 @@ export function resolveRepoConfig(owner: string, repo: string, file: RepoConfigF
     repo,
     thresholds: { ...DEFAULT_THRESHOLDS, ...file.thresholds },
     discord: {
-      digestChannel: file.discord.digestChannel || process.env.DISCORD_DIGEST_CHANNEL_ID || "",
+      digestChannel: file.discord.digestChannel || env("DISCORD_DIGEST_CHANNEL_ID") || "",
       approvalsChannel:
-        file.discord.approvalsChannel || process.env.DISCORD_APPROVALS_CHANNEL_ID || "",
+        file.discord.approvalsChannel || env("DISCORD_APPROVALS_CHANNEL_ID") || "",
     },
   };
 }
@@ -210,21 +210,28 @@ export function sourceRepo(config: Pick<RepoConfig, "owner" | "repo" | "source">
   return config.source ? { owner, repo } : { owner: config.owner, repo: config.repo };
 }
 
+/** An environment variable, trimmed. A value set from a shell pipe often carries a newline. */
+export function env(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value ? value : undefined;
+}
+
 /** Connector used for every GitHub call. Previews and local dev never share the production app. */
 export function githubConnector(): string {
-  if (process.env.GITHUB_CONNECTOR) return process.env.GITHUB_CONNECTOR;
-  return process.env.VERCEL_ENV === "production" ? "github/nuxi" : "github/nuxi-preview";
+  const override = env("GITHUB_CONNECTOR");
+  if (override) return override;
+  return isProduction() ? "github/nuxi" : "github/nuxi-preview";
 }
 
 export function discordConnector(): string {
-  return process.env.DISCORD_CONNECTOR ?? "discord/nuxi";
+  return env("DISCORD_CONNECTOR") ?? "discord/nuxi";
 }
 
 export function isProduction(): boolean {
-  return process.env.VERCEL_ENV === "production";
+  return env("VERCEL_ENV") === "production";
 }
 
 /** Write tools pause for a maintainer unless `NUXI_REQUIRE_APPROVAL=false`. */
 export function requireApproval(): boolean {
-  return process.env.NUXI_REQUIRE_APPROVAL !== "false";
+  return env("NUXI_REQUIRE_APPROVAL") !== "false";
 }
