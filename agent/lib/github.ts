@@ -324,17 +324,22 @@ export async function listOpenIssues(
 
 const searchSchema = z.object({ items: z.array(issueSchema) });
 
+/** Search has no repository in its path. The token comes from the installation of the account the query is scoped to. */
+function searchOwner(query: string): string | undefined {
+  return /\brepo:([\w.-]+)\//.exec(query)?.[1];
+}
+
 export async function searchIssues(query: string, limit: number, signal?: AbortSignal): Promise<z.output<typeof issueSchema>[]> {
   const result = await gh(
     searchSchema,
     `/search/issues?q=${encodeURIComponent(query)}&per_page=${Math.min(limit, 100)}`,
-    { signal },
+    { owner: searchOwner(query), signal },
   );
   return result.items;
 }
 
 export async function searchCount(query: string, signal?: AbortSignal): Promise<number> {
-  const result = await gh(z.object({ total_count: z.number() }), `/search/issues?q=${encodeURIComponent(query)}&per_page=1`, { signal });
+  const result = await gh(z.object({ total_count: z.number() }), `/search/issues?q=${encodeURIComponent(query)}&per_page=1`, { owner: searchOwner(query), signal });
   return result.total_count;
 }
 
