@@ -279,7 +279,7 @@ export async function openSetupPullRequest(ref: RepoRef, signal?: AbortSignal): 
     ...options,
     method: "PUT",
     body: {
-      message: "chore: add nuxi triage config",
+      message: "chore(github): add nuxi triage config",
       branch: SETUP_BRANCH,
       content: Buffer.from(proposal.yaml).toString("base64"),
       ...(leftover ? { sha: leftover.sha } : {}),
@@ -292,7 +292,7 @@ export async function openSetupPullRequest(ref: RepoRef, signal?: AbortSignal): 
       await gh(z.unknown(), `${repoPath(ref)}/contents/${finding.path}`, {
         ...options,
         method: "DELETE",
-        body: { message: `chore: remove ${finding.path.split("/").pop()}`, branch: SETUP_BRANCH, sha: finding.sha },
+        body: { message: `chore(github): remove ${finding.path.split("/").pop()}`, branch: SETUP_BRANCH, sha: finding.sha },
       });
     } catch (error) {
       // 403 and 404: without the Workflows permission GitHub refuses edits under .github/workflows.
@@ -306,7 +306,8 @@ export async function openSetupPullRequest(ref: RepoRef, signal?: AbortSignal): 
   const pull = await gh(pullSchema, `${repoPath(ref)}/pulls`, {
     ...options,
     method: "POST",
-    body: { title: "chore: set up nuxi triage", head: SETUP_BRANCH, base: proposal.defaultBranch, body: setupPullRequestBody(proposal, manual) },
+    // Same subject as the commit that adds the file, in the conventional style most repositories use.
+    body: { title: "chore(github): add nuxi triage config", head: SETUP_BRANCH, base: proposal.defaultBranch, body: setupPullRequestBody(proposal, manual) },
   });
 
   return {
