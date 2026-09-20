@@ -3,7 +3,7 @@ import { githubChannel, type GitHubInboundContext } from "eve/channels/github";
 import { z } from "zod";
 
 import { githubConnector, isProduction } from "../config";
-import { isBot, loadRepoConfig } from "../lib/github";
+import { isBot, loadRepoConfig, noteInstallation } from "../lib/github";
 import { enqueue, type QueueItem } from "../lib/store";
 
 // The GitHub App slug. `@nuxi` belongs to a GitHub user, so mentioning it would ping a stranger.
@@ -24,6 +24,8 @@ async function queue(ctx: GitHubInboundContext, item: Omit<QueueItem, "owner" | 
   if (!isProduction()) return null;
   if (isBot(ctx.sender.login, ctx.sender.type)) return null;
   const ref = { owner: ctx.repository.owner, repo: ctx.repository.name };
+  // Before the config read, which needs a token from this very installation.
+  await noteInstallation(ref.owner, ctx.github.installationId);
   if (!(await loadRepoConfig(ref))) return null;
   await enqueue({ ...ref, ...item, notBefore: Date.now() });
   return null;

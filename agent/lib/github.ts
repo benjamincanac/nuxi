@@ -1,6 +1,8 @@
 import { deleteTokenCacheEntry, getToken, type ConnectTokenParams } from "@vercel/connect";
 import { z } from "zod";
 
+import { listInstallations, rememberInstallation } from "./store";
+
 import {
   CONFIG_PATH,
   env,
@@ -22,29 +24,41 @@ export interface IssueRef extends RepoRef {
   issueNumber: number;
 }
 
-const connectInstallations = z.record(z.string(), z.string());
-
 /**
- * Optional `{ "<owner>": "<connect installation id>" }` map. Only needed once the app is
- * installed on more than one account and the default installation is not the right one.
+ * Which installation to mint a token from. The app is installed once per account, and every webhook
+ * says which installation it came from, so the map builds itself. An account nuxi has not heard
+ * from yet falls back to the connector's default installation.
  */
-function connectInstallationId(owner: string): string | undefined {
-  const raw = env("GITHUB_CONNECT_INSTALLATIONS");
-  if (!raw) return undefined;
-  const parsed = connectInstallations.safeParse(JSON.parse(raw));
-  return parsed.success ? parsed.data[owner] : undefined;
+const installationCache = new Map<string, string>();
+
+async function connectInstallationId(owner: string): Promise<string | undefined> {
+  const key = owner.toLowerCase();
+  const known = installationCache.get(key);
+  if (known) return known;
+  const stored = (await listInstallations())[key];
+  if (stored) installationCache.set(key, stored);
+  return stored;
 }
 
-function tokenParams(owner?: string): ConnectTokenParams {
-  const installationId = owner ? connectInstallationId(owner) : undefined;
+function tokenParams(installationId?: string): ConnectTokenParams {
   return { subject: { type: "app" }, ...(installationId ? { installationId } : {}) };
+}
+
+/** Records the installation a webhook came from. Called before anything else reads the repository. */
+export async function noteInstallation(owner: string, installationId: number | undefined): Promise<void> {
+  if (installationId === undefined) return;
+  const key = owner.toLowerCase();
+  const id = String(installationId);
+  if (installationCache.get(key) === id) return;
+  installationCache.set(key, id);
+  await rememberInstallation(key, id);
 }
 
 export async function githubToken(owner?: string): Promise<string> {
   // Scripts run outside Vercel and may use a personal token instead of Connect.
   const script = env("NUXI_SCRIPT_TOKEN");
   if (script) return script;
-  return getToken(githubConnector(), tokenParams(owner));
+  return getToken(githubConnector(), tokenParams(owner ? await connectInstallationId(owner) : undefined));
 }
 
 const REFRESH_COOLDOWN_MS = 10 * 60_000;
@@ -57,13 +71,13 @@ const lastRefresh = new Map<string, number>();
  * reads a config file from every repository it looks at, so this runs at most once per owner
  * per cooldown and returns false the rest of the time.
  */
-function forgetToken(owner?: string): boolean {
+async function forgetToken(owner?: string): Promise<boolean> {
   if (env("NUXI_SCRIPT_TOKEN")) return false;
   const key = owner ?? "";
   const previous = lastRefresh.get(key) ?? 0;
   if (Date.now() - previous < REFRESH_COOLDOWN_MS) return false;
   lastRefresh.set(key, Date.now());
-  deleteTokenCacheEntry(githubConnector(), tokenParams(owner));
+  deleteTokenCacheEntry(githubConnector(), tokenParams(owner ? await connectInstallationId(owner) : undefined));
   return true;
 }
 
@@ -123,7 +137,7 @@ async function rawRequest(path: string, options: RequestOptions = {}): Promise<R
     // A 404 on a repository the app was just added to means the cached token predates the change.
     if (response.status === 404 && !refreshed) {
       refreshed = true;
-      if (forgetToken(options.owner)) continue;
+      if (await forgetToken(options.owner)) continue;
     }
 
     const wait = attempt < MAX_RATE_LIMIT_RETRIES ? retryAfterSeconds(response) : null;
@@ -328,10 +342,23 @@ const installationRepositoriesSchema = z.object({
   repositories: z.array(z.object({ name: z.string(), owner: z.object({ login: z.string() }), archived: z.boolean().default(false) })),
 });
 
-/** Repositories the app installation can access. A repo without a valid config file is ignored later. */
+/**
+ * Repositories every known installation can access. A repo without a valid config file is ignored
+ * later. `/installation/repositories` answers for the installation the token belongs to, so an
+ * account nuxi has heard from is listed under its own token and the rest under the default one.
+ */
 export async function listInstalledRepositories(signal?: AbortSignal): Promise<RepoRef[]> {
-  const result = await gh(installationRepositoriesSchema, "/installation/repositories?per_page=100", { signal });
-  return result.repositories
+  const owners = [undefined, ...Object.keys(await listInstallations())];
+  const results = await Promise.all(
+    owners.map((owner) =>
+      gh(installationRepositoriesSchema, "/installation/repositories?per_page=100", { owner, signal })
+        // One revoked installation must not blind the sweep to the others.
+        .catch(() => ({ repositories: [] })),
+    ),
+  );
+  const repositories = results.flatMap((result) => result.repositories);
+  return repositories
+    .filter((repo, index) => repositories.findIndex((other) => other.owner.login === repo.owner.login && other.name === repo.name) === index)
     .filter((repo) => !repo.archived && isAllowedOwner(repo.owner.login))
     .map((repo) => ({ owner: repo.owner.login, repo: repo.name }));
 }

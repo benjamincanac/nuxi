@@ -157,6 +157,7 @@ function kv(): KeyValue {
 
 const DECISIONS_KEY = "nuxi:decisions";
 const UPSTREAM_KEY = "nuxi:upstream";
+const INSTALLATIONS_KEY = "nuxi:installations";
 const QUEUE_KEY = "nuxi:queue";
 const MAX_DECISIONS = 5_000;
 const WEEK_SECONDS = 7 * 24 * 60 * 60;
@@ -200,6 +201,18 @@ export async function clearPlan(ref: IssueRef): Promise<void> {
 /** Whether this run is a triage run, meaning a tool has already recorded a plan for it. */
 export async function isTriageRun(runId: string): Promise<boolean> {
   return (await kv().get<boolean>(`nuxi:run:${runId}`)) === true;
+}
+
+/**
+ * Which GitHub App installation covers an account. Every webhook carries it, so installing the app
+ * on a new account is enough: there is nothing to configure and nothing to redeploy.
+ */
+export function rememberInstallation(owner: string, installationId: number | string): Promise<void> {
+  return kv().hset(INSTALLATIONS_KEY, owner.toLowerCase(), String(installationId));
+}
+
+export function listInstallations(): Promise<Record<string, string>> {
+  return kv().hgetall<string>(INSTALLATIONS_KEY);
 }
 
 export function trackUpstreamPair(pair: UpstreamPair): Promise<void> {
