@@ -12,7 +12,7 @@ import { dispatch, drainAndDispatch } from "../lib/dispatch";
 import { gh, listOpenIssues, loadRepoConfig } from "../lib/github";
 import { openSetupPullRequest, proposeSetup } from "../lib/setup";
 import { DISPATCH_BATCH, sweepRepo } from "../lib/sweep";
-import { enqueue, listDecisions } from "../lib/store";
+import { enqueue, listDecisions, listInstallations } from "../lib/store";
 
 const OPS_AUTH = {
   authenticator: "ops",
@@ -56,7 +56,13 @@ export default defineChannel({
       if (params.id === "check") {
         const connector = githubConnector();
         // Never return the token itself, only what identifies it.
-        const minted = await getTokenResponse(connector, { subject: { type: "app" } }).catch((error: unknown) => String(error));
+        // The installation that covers this owner, when a webhook from it has already said which.
+        const installations = await listInstallations();
+        const installationId = installations[owner.toLowerCase()];
+        const minted = await getTokenResponse(connector, {
+          subject: { type: "app" },
+          ...(installationId ? { installationId } : {}),
+        }).catch((error: unknown) => String(error));
         const token =
           typeof minted === "string"
             ? minted
@@ -68,6 +74,7 @@ export default defineChannel({
         return Response.json({
           environment: env("VERCEL_ENV") ?? "local",
           connector,
+          installations,
           token,
           repository: visible,
           approvals: { required: requireApproval(), raw: raw === undefined ? null : JSON.stringify(raw) },
