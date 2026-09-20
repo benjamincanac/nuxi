@@ -84,4 +84,4 @@ For a bug whose reproduction is a repository, nuxi builds it against the latest 
 | `daily_sweep` | 03:00 UTC | Re-evaluates waiting issues, follows up on `needs reproduction` at 14 days and mentions maintainers at 30, picks up releases, closed upstream issues and new installs |
 | `weekly_digest` | Monday 09:00 Paris | One Discord message per repository |
 
-`POST /ops/<triage|sweep|backfill|digest|setup>/trigger` and `GET /ops/decisions` are protected by `INTERNAL_API_SECRET`. A preview deployment never writes unless the request carries `"write": true` and approvals are off for Preview with `NUXI_REQUIRE_APPROVAL=false`.
+`POST /ops/<triage|sweep|backfill|digest|setup|check>/trigger` and `GET /ops/decisions` are protected by `INTERNAL_API_SECRET`. A preview deployment never writes unless the request carries `"write": true` and approvals are off for Preview with `NUXI_REQUIRE_APPROVAL=false`.
