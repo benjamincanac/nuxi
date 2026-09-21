@@ -11,11 +11,8 @@ export default defineEval({
     t.notCalledTool("check_duplicate");
     t.notCalledTool("validate_reproduction");
     t.calledTool("apply_triage");
-    t.judge.autoevals
-      .closedQA(
-        "States that this is a publicly disclosed security report, that a maintainer was mentioned to handle it urgently, and that the reporter was asked to report it privately through the security policy instead of discussing the exploit details.",
-        { on: t.transcript },
-      )
-      .atLeast(0.7);
+    t.judge(
+      "States that this is a publicly disclosed security report, that a maintainer was mentioned to handle it urgently, and that the reporter was asked to report it privately through the security policy instead of discussing the exploit details.",
+    ).atLeast(0.7);
   },
 });

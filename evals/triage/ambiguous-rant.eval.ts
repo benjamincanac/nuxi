@@ -11,11 +11,8 @@ export default defineEval({
     t.notCalledTool("check_duplicate");
     t.notCalledTool("validate_reproduction");
     t.calledTool("apply_triage", { output: (value) => (value as { comment: string | null }).comment === null });
-    t.judge.autoevals
-      .closedQA(
-        "States that the issue was left for a maintainer to handle personally, without labeling it or posting a substantive comment to the reporter.",
-        { on: t.transcript },
-      )
-      .atLeast(0.7);
+    t.judge(
+      "States that the issue was left for a maintainer to handle personally, without labeling it or posting a substantive comment to the reporter.",
+    ).atLeast(0.7);
   },
 });

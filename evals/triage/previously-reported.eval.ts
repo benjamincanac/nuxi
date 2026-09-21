@@ -18,11 +18,8 @@ export default defineEval({
         return comment.includes("412") && !/duplicate/i.test(comment);
       },
     });
-    t.judge.autoevals
-      .closedQA(
-        "Says the same problem was already reported in issue #412 and that it is closed, without calling this issue a duplicate and without saying it will be closed.",
-        { on: t.transcript },
-      )
-      .atLeast(0.7);
+    t.judge(
+      "Says the same problem was already reported in issue #412 and that it is closed, without calling this issue a duplicate and without saying it will be closed.",
+    ).atLeast(0.7);
   },
 });

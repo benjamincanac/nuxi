@@ -10,11 +10,8 @@ export default defineEval({
     t.calledTool("classify_issue");
     t.calledTool("validate_reproduction");
     t.calledTool("apply_triage");
-    t.judge.autoevals
-      .closedQA(
-        "States that the reproduction uses an older version of the package than the latest release and asks the reporter to retest on the latest version.",
-        { on: t.transcript },
-      )
-      .atLeast(0.7);
+    t.judge(
+      "States that the reproduction uses an older version of the package than the latest release and asks the reporter to retest on the latest version.",
+    ).atLeast(0.7);
   },
 });

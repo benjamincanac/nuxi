@@ -11,11 +11,8 @@ export default defineEval({
     t.notCalledTool("check_duplicate");
     t.notCalledTool("validate_reproduction");
     t.calledTool("apply_triage");
-    t.judge.autoevals
-      .closedQA(
-        "States that the issue was labeled a usage question and that converting it to a Q&A discussion was suggested.",
-        { on: t.transcript },
-      )
-      .atLeast(0.7);
+    t.judge(
+      "States that the issue was labeled a usage question and that converting it to a Q&A discussion was suggested.",
+    ).atLeast(0.7);
   },
 });

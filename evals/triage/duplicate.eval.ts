@@ -10,11 +10,8 @@ export default defineEval({
     t.calledTool("classify_issue");
     t.calledTool("check_duplicate", { output: (value) => (value as { duplicateOf: { number: number } | null }).duplicateOf?.number === 101 });
     t.calledTool("apply_triage");
-    t.judge.autoevals
-      .closedQA(
-        "States that the issue was labeled a duplicate of issue #101 and suggests closing it.",
-        { on: t.transcript },
-      )
-      .atLeast(0.7);
+    t.judge(
+      "States that the issue was labeled a duplicate of issue #101 and suggests closing it.",
+    ).atLeast(0.7);
   },
 });

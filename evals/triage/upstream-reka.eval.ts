@@ -9,11 +9,8 @@ export default defineEval({
     t.succeeded();
     t.calledTool("classify_issue");
     t.calledTool("track_upstream");
-    t.judge.autoevals
-      .closedQA(
-        "States that the root cause looks upstream in reka-ui and that a matching upstream issue was found and linked.",
-        { on: t.transcript },
-      )
-      .atLeast(0.7);
+    t.judge(
+      "States that the root cause looks upstream in reka-ui and that a matching upstream issue was found and linked.",
+    ).atLeast(0.7);
   },
 });
