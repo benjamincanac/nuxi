@@ -1,0 +1,78 @@
+{
+  "config": {
+    "dryRun": true,
+    "maintainers": [
+      "maintainer"
+    ],
+    "upstreams": [
+      "unovue/reka-ui",
+      "tailwindlabs/tailwindcss"
+    ],
+    "package": {
+      "name": "@acme/ui"
+    },
+    "nextMajor": {
+      "label": "v5"
+    },
+    "reproduction": {
+      "blank": [
+        "acme-ui-starter"
+      ]
+    },
+    "securityPolicy": "https://example.com/SECURITY.md",
+    "areas": [
+      {
+        "kind": "component",
+        "names": [
+          "Button",
+          "Select",
+          "SelectMenu",
+          "Modal",
+          "Table",
+          "Input",
+          "Tooltip"
+        ]
+      }
+    ]
+  },
+  "latestVersion": "1.4.0",
+  "issue": {
+    "title": "UModal is not restoring focus to the trigger after closing",
+    "body": "### Environment\n\n- @acme/ui: 1.4.0\n- Vue: 3.5.13\n\n### Description\n\nWhen a `UModal` closes, focus is dropped on the body instead of returning to the button that opened it. Keyboard users lose their place in the page and have to tab from the top again.\n\n### Expected behavior\n\nFocus should return to the trigger, as the dialog pattern requires.",
+    "author": "rwhitfield",
+    "authorAssociation": "NONE",
+    "labels": [
+      "triage"
+    ],
+    "type": null,
+    "createdAt": "2026-08-14T16:30:00Z",
+    "comments": []
+  },
+  "similar": [
+    {
+      "number": 412,
+      "title": "Modal does not return focus to the trigger on close",
+      "state": "closed",
+      "url": "https://github.com/acme/ui/issues/412",
+      "body": "Closing a UModal leaves focus on the document body rather than on the element that opened it, so keyboard navigation restarts from the top of the page."
+    },
+    {
+      "number": 300,
+      "title": "Modal backdrop click closes the dialog while a select is open",
+      "state": "open",
+      "url": "https://github.com/acme/ui/issues/300",
+      "body": "Clicking the backdrop while a USelect inside the modal is open closes the whole modal instead of just the select."
+    },
+    {
+      "number": 255,
+      "title": "Tooltip stays visible after the trigger unmounts",
+      "state": "closed",
+      "url": "https://github.com/acme/ui/issues/255",
+      "body": "A UTooltip left open when its trigger is removed from the DOM never disappears."
+    }
+  ],
+  "fixedCandidates": [],
+  "upstreamCandidates": [],
+  "reproduction": null,
+  "sandboxLogs": null
+}

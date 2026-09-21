@@ -118,7 +118,7 @@ export function duplicateQuestions(candidates: readonly { number: number; title:
     is_duplicate: {
       type: "boolean",
       instructions:
-        "Is the issue a duplicate of one of the candidates, so that closing it and pointing to the candidate loses no information?",
+        "Do the issue and the chosen candidate report the same underlying problem or request? Answer on the content alone. Whether the candidate is open or closed, and what should happen to either of them, is decided elsewhere and must not lower your answer.",
     },
   } as const satisfies Record<string, Question>;
 }
