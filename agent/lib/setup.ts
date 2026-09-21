@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { CONFIG_PATH, parseRepoConfig, type RepoConfigInput } from "../config";
 import { gh, ghText, GitHubRequestError, type RepoRef } from "./github";
+import { intakeLabelsFromForms } from "./issue-forms";
 
 export const SETUP_BRANCH = "nuxi/setup";
 
@@ -13,8 +14,8 @@ export const SETUP_BRANCH = "nuxi/setup";
  */
 const AREA_CANDIDATES = [{ kind: "package", glob: "packages/*" }];
 
-/** Labels the bot owns. A stale workflow that only targets these is fully replaced. */
-const OWNED_LABELS = new Set(["triage", "needs reproduction", "needs verification", "stale"]);
+/** Labels the bot owns, with the intake labels of the repository. A stale workflow that only targets these is fully replaced. */
+const OWNED_LABELS = ["needs reproduction", "needs verification", "stale"];
 
 /** Labels that wait on a maintainer. A stale workflow that stays must not close these. */
 const EXEMPT_LABELS = ["question", "duplicate", "answered", "needs verification", "needs reproduction"];
@@ -101,7 +102,8 @@ function listOption(source: string, key: string): string[] {
 }
 
 /** Known automations that overlap with the bot. Anything else is left alone. */
-export function inspectWorkflow(path: string, sha: string, source: string): WorkflowFinding | null {
+export function inspectWorkflow(path: string, sha: string, source: string, intakeLabels: readonly string[] = []): WorkflowFinding | null {
+  const owned = new Set([...OWNED_LABELS, ...intakeLabels]);
   const uses = [...source.matchAll(/uses:\s*([\w.-]+\/[\w.-]+)/g)].map((match) => (match[1] ?? "").toLowerCase());
 
   if (uses.includes("hebilicious/reproduire")) {
@@ -117,7 +119,7 @@ export function inspectWorkflow(path: string, sha: string, source: string): Work
       /days-before-pr-close:\s*-1/.test(source) ||
       (/days-before-stale:\s*-1/.test(source) && !/days-before-pr-stale:/.test(source));
     const handlesPullRequests = !pullRequestsOff;
-    if (!handlesPullRequests && targets.length > 0 && targets.every((label) => OWNED_LABELS.has(label))) {
+    if (!handlesPullRequests && targets.length > 0 && targets.every((label) => owned.has(label))) {
       return { path, sha, action: "remove", reason: `Closes issues labeled ${targets.map((label) => `\`${label}\``).join(", ")} after a delay. nuxi follows up and mentions a maintainer instead, and never closes.` };
     }
     return {
@@ -190,8 +192,10 @@ export async function proposeSetup(ref: RepoRef, signal?: AbortSignal): Promise<
   }
 
   const reproduireTemplate = [...paths].find((path) => path.startsWith(".github/reproduire/") && path.endsWith(".md"));
-  const hasForm = [...paths].some((path) => /^\.github\/ISSUE_TEMPLATE\/[^/]+\.ya?ml$/.test(path) && !path.endsWith("/config.yml"));
-  if (!hasForm) notes.push("No issue form was found. nuxi reads the reproduction guide and starter links from the form's reproduction field. Without one, set `reproduction` in this file.");
+  const formPaths = [...paths].filter((path) => /^\.github\/ISSUE_TEMPLATE\/[^/]+\.ya?ml$/.test(path) && !path.endsWith("/config.yml"));
+  const forms = await Promise.all(formPaths.map(async (path) => (await ghText(`${repoPath(ref)}/contents/${path}`, options)) ?? ""));
+  const intakeLabels = intakeLabelsFromForms(forms);
+  if (!formPaths.length) notes.push("No issue form was found. nuxi reads the reproduction guide and starter links from the form's reproduction field. Without one, set `reproduction` in this file.");
 
   const securityPath = ["SECURITY.md", ".github/SECURITY.md", "docs/SECURITY.md"].find((path) => paths.has(path));
   if (securityPath) config.securityPolicy = `https://github.com/${ref.owner}/${ref.repo}/blob/${repo.default_branch}/${securityPath}`;
@@ -204,7 +208,7 @@ export async function proposeSetup(ref: RepoRef, signal?: AbortSignal): Promise<
   for (const [path, sha] of blobs) {
     if (!/^\.github\/workflows\/[^/]+\.ya?ml$/.test(path)) continue;
     const source = await ghText(`${repoPath(ref)}/contents/${path}`, options);
-    const finding = source ? inspectWorkflow(path, sha, source) : null;
+    const finding = source ? inspectWorkflow(path, sha, source, intakeLabels) : null;
     if (finding) workflows.push(finding);
   }
   // The reproduire template is dead weight once its workflow goes.

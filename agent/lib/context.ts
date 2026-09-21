@@ -14,7 +14,7 @@ import {
   type Issue,
   type IssueRef,
 } from "./github";
-import { loadReproductionSettings, reproductionFromConfig, type ReproductionSettings } from "./issue-forms";
+import { loadIntakeLabels, loadReproductionSettings, reproductionFromConfig, type ReproductionSettings } from "./issue-forms";
 
 export const FIXTURE_OWNER = "fixture";
 
@@ -60,6 +60,8 @@ export type ReproductionCheck = z.output<typeof reproductionSchema>;
 const fixtureSchema = z.object({
   config: repoConfigSchema,
   latestVersion: z.string().default("1.0.0"),
+  /** What the issue forms of a real repository would give. Fixtures have no forms to read. */
+  intakeLabels: z.array(z.string()).default(["triage"]),
   issue: z.object({
     title: z.string(),
     body: z.string(),
@@ -85,6 +87,8 @@ export interface TriageContext {
   areas: Area[];
   /** Where reproductions start from, read from the repo's issue forms. */
   reproduction: ReproductionSettings;
+  /** Labels every issue form applies. A decision removes them. Empty when the repository has none. */
+  intakeLabels: string[];
   humanLabels: Set<string>;
   lastHumanActivity: number | null;
   pinned: boolean;
@@ -111,6 +115,7 @@ async function loadFixture(ref: IssueRef): Promise<TriageContext> {
     // Fixtures list their areas by name, there is no repository to glob.
     areas: config.areas.flatMap((group) => group.names.map((name) => toArea(name, group))),
     reproduction: reproductionFromConfig(config),
+    intakeLabels: fixture.intakeLabels,
     humanLabels: new Set(),
     lastHumanActivity: null,
     pinned: false,
@@ -130,19 +135,20 @@ export async function loadTriageContext(
   const config = override ?? (await loadRepoConfig(ref, signal));
   if (!config) return null;
 
-  const [issue, timeline, areas, pinned, reproduction] = await Promise.all([
+  const [issue, timeline, areas, pinned, reproduction, intakeLabels] = await Promise.all([
     getIssue(ref, signal),
     getTimeline(ref, signal),
     loadAreas(config, signal),
     listPinnedIssues(ref, signal).catch(() => [] as number[]),
     loadReproductionSettings(config, signal),
+    loadIntakeLabels(config, signal),
   ]);
 
   const humanTimes: number[] = [];
   for (const event of timeline) {
     const human = event.actor && event.actor.type !== "Bot" && !event.actor.login.endsWith("[bot]");
     if (human && (event.event === "labeled" || event.event === "unlabeled") && event.created_at) {
-      // The issue template applies `triage` as the reporter when the issue is created.
+      // The issue forms apply their labels as the reporter when the issue is created.
       if (event.actor?.login !== issue.author) humanTimes.push(Date.parse(event.created_at));
     }
   }
@@ -157,6 +163,7 @@ export async function loadTriageContext(
     issue,
     areas,
     reproduction,
+    intakeLabels,
     humanLabels: humanAppliedLabels(timeline),
     lastHumanActivity: humanTimes.length ? Math.max(...humanTimes) : null,
     pinned: pinned.includes(ref.issueNumber),

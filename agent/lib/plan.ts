@@ -50,7 +50,7 @@ export interface TriagePlan {
   areas: string[];
   /** Facts the comment must convey. The writing model rephrases them and adds nothing. */
   facts: string[];
-  /** `needs_human`: `triage` stays, nothing is written. */
+  /** `needs_human`: nothing is written, the intake labels stay. */
   escalate: boolean;
   /** Security report: the mention is the only comment. */
   security: boolean;

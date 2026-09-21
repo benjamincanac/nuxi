@@ -6,12 +6,12 @@ description: Use when classify_issue reports escalate or security, or when you a
 
 ## `escalate: true`
 
-Jev judged that a maintainer should handle the issue personally: it is ambiguous, hostile, a rant, or out of scope. The `triage` label stays. Nothing is written on the issue.
+Jev judged that a maintainer should handle the issue personally: it is ambiguous, hostile, a rant, or out of scope. Nothing is written on the issue and its labels stay as they are.
 
 1. Do not call any other pipeline tool.
-2. Do not call `mention_maintainers`. The weekly digest lists what is still in `triage`.
+2. Do not call `mention_maintainers`. Your final reply is what tells the maintainers.
 3. Call `apply_triage` with an empty comment so the run is logged.
-4. Reply with one sentence saying the issue was left for a maintainer.
+4. Reply with one sentence saying the issue was left for a maintainer. Do not name a label, you have not seen the labels of the issue.
 
 Never answer a hostile comment, never argue, never apologize on behalf of the maintainers.
 

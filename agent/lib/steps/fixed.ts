@@ -139,7 +139,7 @@ export async function checkFixedInRelease(
     fixedBy: judged ? fixedBy : null,
     patch: {
       addLabels: issue.labels.includes("needs verification") ? [] : ["needs verification"],
-      removeLabels: ["triage"],
+      removeLabels: context.intakeLabels,
       facts: [`${evidence} Ask the reporter to confirm on the latest version.`],
     },
   };

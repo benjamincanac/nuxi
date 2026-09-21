@@ -69,11 +69,12 @@ export async function applyPlan(
   humanLabels: ReadonlySet<string>,
   currentLabels: readonly string[],
   reproduction: ReproductionSettings,
+  intakeLabels: readonly string[],
 ): Promise<AppliedActions> {
   const addedLabels = plan.addLabels.filter((label) => isAllowedLabel(config, label) && !currentLabels.includes(label));
   const removable = plan.removeLabels.filter((label) => currentLabels.includes(label));
-  // `triage` comes from the issue template, so it counts as applied by the reporter. It is the one label the bot owns.
-  const removedLabels = removable.filter((label) => label === "triage" || !humanLabels.has(label));
+  // Intake labels come from the issue forms, so they count as applied by the reporter. They are the only ones of those the bot removes.
+  const removedLabels = removable.filter((label) => intakeLabels.includes(label) || !humanLabels.has(label));
   const keptHumanLabels = removable.filter((label) => !removedLabels.includes(label));
   const comment = plan.escalate ? "" : buildComment(config, plan, written, reproduction);
 

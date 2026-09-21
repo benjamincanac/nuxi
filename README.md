@@ -1,6 +1,6 @@
 # nuxi
 
-An [eve](https://eve.dev) agent that triages GitHub issues. It runs as the `nuxiai[bot]` GitHub App through [Vercel Connect](https://vercel.com/docs/connect) and moves issues out of `triage` by taking one decision per issue.
+An [eve](https://eve.dev) agent that triages GitHub issues. It runs as the `nuxiai[bot]` GitHub App through [Vercel Connect](https://vercel.com/docs/connect) and triages new issues by taking one decision per issue.
 
 It never closes, transfers or converts an issue, and never removes a label a human applied. Anything irreversible is handed to the maintainers with an @-mention.
 
@@ -56,7 +56,7 @@ There is no install webhook, so the daily sweep opens it. `POST /ops/setup/trigg
 
 ## Labels
 
-Nothing to set up. nuxi creates a label the first time it applies it and never edits an existing one. It can apply `duplicate`, `answered`, `question`, `needs verification`, `needs reproduction`, `has pr`, `a11y`, `stale`, the next major label and `upstream/<repo>`. It only removes `triage`, which comes from the repository's issue template.
+Nothing to set up. nuxi creates a label the first time it applies it and never edits an existing one. It can apply `duplicate`, `answered`, `question`, `needs verification`, `needs reproduction`, `has pr`, `a11y`, `stale`, the next major label and `upstream/<repo>`. It only removes the labels that every issue form of the repository applies, such as `triage`. A repository without such a label has nothing to remove.
 
 ## Sandbox
 

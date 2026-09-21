@@ -1,10 +1,12 @@
 import type { RepoConfig } from "../config";
 import { listOpenIssues, listReleases, type Issue } from "./github";
+import { loadIntakeLabels } from "./issue-forms";
 import { closedUpstreamPairs } from "./steps/upstream";
 import { alreadyEvaluated, enqueue, getLastSeenRelease, setLastSeenRelease, trackUpstreamPair, type QueueItem } from "./store";
 
 const DAY_MS = 24 * 60 * 60_000;
-const SWEEP_LABELS = ["triage", "needs reproduction", "needs verification"];
+/** Labels nuxi applies that wait on someone. The intake labels of the repository are swept too. */
+const SWEEP_LABELS = ["needs reproduction", "needs verification"];
 
 /** Sessions started per minute by `schedules/dispatch_queue`. */
 export const DISPATCH_BATCH = 5;
@@ -24,13 +26,14 @@ export interface SweepSummary {
 }
 
 /**
- * Queues every issue in `triage`, `needs reproduction` or `needs verification` that changed,
+ * Queues every issue with an intake label, `needs reproduction` or `needs verification` that changed,
  * crossed a follow-up threshold, or may be affected by a release published since the last sweep.
  */
 export async function sweepRepo(config: RepoConfig, options: { force?: boolean; limit?: number; explicit?: boolean; stagger?: boolean } = {}): Promise<SweepSummary> {
   const repo = `${config.owner}/${config.repo}`;
+  const intakeLabels = await loadIntakeLabels(config);
   const [issues, releases, lastSeen] = await Promise.all([
-    listOpenIssues(config, SWEEP_LABELS),
+    listOpenIssues(config, [...intakeLabels, ...SWEEP_LABELS]),
     listReleases(config),
     getLastSeenRelease(repo),
   ]);

@@ -218,7 +218,7 @@ pnpm run deploy
 Then, on the playground:
 
 1. Open an issue without a reproduction. Within a minute or two the approvals channel shows the run, then an Approve prompt with what it would write.
-2. Approve. The issue gets `needs reproduction`, loses `triage`, and receives one comment.
+2. Approve. The issue gets `needs reproduction`, loses the label its issue forms apply, and receives one comment.
 3. Reply with a repository link. nuxi removes the label and runs again.
 4. Comment `@nuxiai can you triage this again?` on another issue.
 5. In Discord, `/ask message: what's waiting on me?`.

@@ -160,7 +160,7 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
   }
 
   patch.addLabels = labels.filter((label) => !issue.labels.includes(label));
-  if (decided) patch.removeLabels = ["triage"];
+  if (decided) patch.removeLabels = context.intakeLabels;
 
   return { answers, patch, next, type };
 }

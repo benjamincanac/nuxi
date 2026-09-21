@@ -44,7 +44,7 @@ export default defineTool({
       throw new Error(`The comment is ${words} words with the appended request, the limit is ${MAX_COMMENT_WORDS}. Shorten it and call apply_triage again.`);
     }
 
-    const actions = await applyPlan(context.config, plan, comment, context.humanLabels, context.issue.labels, context.reproduction);
+    const actions = await applyPlan(context.config, plan, comment, context.humanLabels, context.issue.labels, context.reproduction, context.intakeLabels);
     return { applied: !actions.dryRun, ...actions };
   },
 });

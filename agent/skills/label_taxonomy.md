@@ -8,7 +8,7 @@ You never pick labels. This page explains what the plan contains so you can desc
 
 ## Applied by the bot
 
-| Label | Meaning | Leaves `triage` |
+| Label | Meaning | Removes the intake labels |
 | --- | --- | --- |
 | `question` | Usage question. Maintainers are asked to convert it to a Q&A discussion. | yes |
 | `upstream/<name>` | Root cause in a configured upstream repository. | yes |
@@ -26,7 +26,7 @@ The Issue Type (Bug, Enhancement, Documentation) is set only when it is missing.
 
 ## Removed by the bot
 
-`triage`, once a decision from the first table is taken, and `needs reproduction` when the reporter provides one. A label applied by a human is never removed. `apply_triage` enforces this and reports the labels it kept in `keptHumanLabels`.
+The intake labels, once a decision from the first table is taken, and `needs reproduction` when the reporter provides one. Intake labels are the ones the repository's issue forms put on every new issue, such as `triage` or `pending triage`. A repository without them has nothing to remove. A label applied by a human is never removed. `apply_triage` enforces this and reports the labels it kept in `keptHumanLabels`.
 
 ## Never applied by the bot
 

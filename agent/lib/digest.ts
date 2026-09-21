@@ -1,5 +1,6 @@
 import type { RepoConfig } from "../config";
 import { listOpenIssues, searchCount, searchIssues } from "./github";
+import { loadIntakeLabels } from "./issue-forms";
 import { closedUpstreamPairs } from "./steps/upstream";
 import { listDecisions } from "./store";
 
@@ -18,7 +19,8 @@ export interface Digest {
   areaClusters: { label: string; count: number }[];
   topEnhancements: (Link & { thumbsUp: number })[];
   sandbox: Record<string, number>;
-  totals: { triage: number; resolvedThisWeek: number };
+  /** `untriaged` counts the open issues that still carry an intake label. `null` when the repository has none. */
+  totals: { untriaged: number | null; intakeLabels: string[]; resolvedThisWeek: number };
 }
 
 async function labeled(repo: string, label: string, signal?: AbortSignal): Promise<Link[]> {
@@ -30,7 +32,10 @@ export async function buildDigest(config: RepoConfig, signal?: AbortSignal): Pro
   const repo = `${config.owner}/${config.repo}`;
   const since = new Date(Date.now() - WEEK_MS).toISOString().slice(0, 10);
 
-  const [duplicate, answered, verification, question, upstreamClosed, open, enhancements, triage, resolved, decisions] =
+  const intakeLabels = await loadIntakeLabels(config, signal);
+  const intake = intakeLabels.map((label) => `"${label}"`).join(",");
+
+  const [duplicate, answered, verification, question, upstreamClosed, open, enhancements, untriaged, resolved, decisions] =
     await Promise.all([
       labeled(repo, "duplicate", signal),
       labeled(repo, "answered", signal),
@@ -39,7 +44,7 @@ export async function buildDigest(config: RepoConfig, signal?: AbortSignal): Pro
       closedUpstreamPairs(repo, signal),
       listOpenIssues(config, [], signal),
       searchIssues(`repo:${repo} is:issue is:open type:Enhancement sort:reactions-+1-desc`, 10, signal),
-      searchCount(`repo:${repo} is:issue is:open label:triage`, signal),
+      intake ? searchCount(`repo:${repo} is:issue is:open label:${intake}`, signal) : null,
       searchCount(`repo:${repo} is:issue closed:>=${since}`, signal),
       listDecisions(),
     ]);
@@ -80,7 +85,7 @@ export async function buildDigest(config: RepoConfig, signal?: AbortSignal): Pro
     areaClusters: [...clusters].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count).slice(0, 8),
     topEnhancements: enhancements.map((item) => ({ number: item.number, title: item.title, url: item.html_url, thumbsUp: item.reactions?.["+1"] ?? 0 })),
     sandbox,
-    totals: { triage, resolvedThisWeek: resolved },
+    totals: { untriaged, intakeLabels, resolvedThisWeek: resolved },
   };
 }
 
@@ -103,7 +108,11 @@ export function digestEmbeds(digest: Digest): Record<string, unknown>[] {
     {
       title: `${digest.repo} weekly triage`,
       url: `https://github.com/${digest.repo}/issues`,
-      description: `**${digest.totals.triage}** still in \`triage\`, **${digest.totals.resolvedThisWeek}** closed this week, **${digest.duplicatesDetected}** duplicates detected.`,
+      description: [
+        digest.totals.untriaged === null ? "" : `**${digest.totals.untriaged}** still in ${digest.totals.intakeLabels.map((label) => `\`${label}\``).join(" or ")}`,
+        `**${digest.totals.resolvedThisWeek}** closed this week`,
+        `**${digest.duplicatesDetected}** duplicates detected.`,
+      ].filter(Boolean).join(", "),
       color: 0x00dc82,
       fields: fields.slice(0, 25),
     },

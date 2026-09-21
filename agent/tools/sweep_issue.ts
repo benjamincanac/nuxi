@@ -16,7 +16,7 @@ function daysSince(date: string | undefined): number {
 
 export default defineTool({
   description:
-    "Daily sweep step for one issue. Applies the time based rules: follow up once on `needs reproduction`, mention maintainers when it stays idle, mention them when a `needs verification` issue gets no confirmation, and ask Jev whether a long idle `triage` issue is still relevant. Returns the tools to call next.",
+    "Daily sweep step for one issue. Applies the time based rules: follow up once on `needs reproduction`, mention maintainers when it stays idle, mention them when a `needs verification` issue gets no confirmation, and ask Jev whether a long idle issue that was never triaged is still relevant. Returns the tools to call next.",
   inputSchema: issueInput,
   label: { start: ({ owner, repo, issueNumber }) => `Sweep ${owner}/${repo}#${issueNumber}` },
   async execute(ref, ctx) {
@@ -52,7 +52,7 @@ export default defineTool({
         const evidence = issue.comments.findLast((comment) => comment.authorType === "Bot")?.body ?? "";
         patch = { mentions: [{ template: "verify_fixed", detail: clip(evidence.split("\n")[0] ?? "", 200) }] };
       }
-    } else if (issue.labels.includes("triage") && daysSince(issue.updatedAt) >= staleDays) {
+    } else if (context.intakeLabels.some((label) => issue.labels.includes(label)) && daysSince(issue.updatedAt) >= staleDays) {
       const releases = (await listReleases(ref, ctx.abortSignal))
         .filter((release) => release.published_at && release.published_at > issue.createdAt)
         .slice(0, 10)

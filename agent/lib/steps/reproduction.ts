@@ -188,7 +188,7 @@ export async function validateReproduction(context: TriageContext, signal?: Abor
           : `${check.url} does not depend on ${config.package?.name ?? "the package"}`,
     );
     patch.addLabels = issue.labels.includes("needs reproduction") ? [] : ["needs reproduction"];
-    patch.removeLabels = ["triage"];
+    patch.removeLabels = context.intakeLabels;
     patch.facts = [`The reproduction is not usable: ${reasons.join("; ")}.`, "REPRODUCTION_REQUEST"];
   } else if (valid && latestVersion && isBehind(valid.version ?? reported ?? latestVersion, latestVersion)) {
     const version = valid.version ?? reported;

@@ -108,37 +108,78 @@ export function reproductionFromForm(source: string): ReproductionSettings | nul
   };
 }
 
+const formLabelsSchema = z.object({ labels: z.union([z.array(z.string()), z.string()]).default([]) });
+
+/**
+ * Labels that every issue form applies, so every new issue carries them. That is how a repository
+ * marks an issue as waiting for triage, and it is the label a decision removes. A repository
+ * without forms, or whose forms share no label, has none.
+ */
+export function intakeLabelsFromForms(sources: readonly string[]): string[] {
+  const perForm: string[][] = [];
+  for (const source of sources) {
+    let raw: unknown;
+    try {
+      raw = parseYaml(source);
+    } catch {
+      continue;
+    }
+    const form = formLabelsSchema.safeParse(raw);
+    if (!form.success) continue;
+    const labels = typeof form.data.labels === "string" ? form.data.labels.split(",") : form.data.labels;
+    perForm.push(labels.map((label) => label.trim()).filter(Boolean));
+  }
+  const [first = [], ...rest] = perForm;
+  return first.filter((label) => rest.every((labels) => labels.includes(label)));
+}
+
+interface IssueForms {
+  reproduction: ReproductionSettings;
+  intakeLabels: string[];
+}
+
 const CACHE_TTL_MS = 5 * 60_000;
-const cache = new Map<string, { expires: number; value: ReproductionSettings }>();
+const cache = new Map<string, { expires: number; value: IssueForms }>();
 const directorySchema = z.array(z.object({ name: z.string(), path: z.string(), type: z.string() }));
+
+async function loadIssueForms(config: RepoConfig, signal?: AbortSignal): Promise<IssueForms> {
+  const source = sourceRepo(config);
+  const key = `${source.owner}/${source.repo}`.toLowerCase();
+  const cached = cache.get(key);
+  if (cached && cached.expires >= Date.now()) return cached.value;
+
+  const base = `/repos/${source.owner}/${source.repo}/contents`;
+  const entries = await gh(directorySchema, `${base}/.github/ISSUE_TEMPLATE`, { owner: source.owner, signal }).catch(() => []);
+  const forms = entries.filter((candidate) => candidate.type === "file" && /\.ya?ml$/.test(candidate.name) && candidate.name !== "config.yml");
+  const sources = await Promise.all(forms.map(async (entry) => (await ghText(`${base}/${entry.path}`, { owner: source.owner, signal })) ?? ""));
+
+  let reproduction = EMPTY_REPRODUCTION;
+  for (const text of sources) {
+    const form = reproductionFromForm(text);
+    if (form) {
+      reproduction = form;
+      break;
+    }
+  }
+  const value = { reproduction, intakeLabels: intakeLabelsFromForms(sources) };
+  cache.set(key, { expires: Date.now() + CACHE_TTL_MS, value });
+  return value;
+}
+
+/** See `intakeLabelsFromForms`. */
+export async function loadIntakeLabels(config: RepoConfig, signal?: AbortSignal): Promise<string[]> {
+  return (await loadIssueForms(config, signal)).intakeLabels;
+}
 
 /** Issue form settings, with the repo's `reproduction` config on top when it sets something. */
 export async function loadReproductionSettings(config: RepoConfig, signal?: AbortSignal): Promise<ReproductionSettings> {
-  const source = sourceRepo(config);
-  const key = `${source.owner}/${source.repo}`.toLowerCase();
-  let detected = cache.get(key);
-
-  if (!detected || detected.expires < Date.now()) {
-    const base = `/repos/${source.owner}/${source.repo}/contents`;
-    const entries = await gh(directorySchema, `${base}/.github/ISSUE_TEMPLATE`, { owner: source.owner, signal }).catch(() => []);
-    let value = EMPTY_REPRODUCTION;
-    for (const entry of entries.filter((candidate) => candidate.type === "file" && /\.ya?ml$/.test(candidate.name) && candidate.name !== "config.yml")) {
-      const form = reproductionFromForm((await ghText(`${base}/${entry.path}`, { owner: source.owner, signal })) ?? "");
-      if (form) {
-        value = form;
-        break;
-      }
-    }
-    detected = { expires: Date.now() + CACHE_TTL_MS, value };
-    cache.set(key, detected);
-  }
-
+  const detected = (await loadIssueForms(config, signal)).reproduction;
   const override = config.reproduction;
   return {
-    ...detected.value,
-    guide: override.guide ?? detected.value.guide,
-    templates: override.templates.length ? override.templates : detected.value.templates,
-    blank: [...new Set([...detected.value.blank, ...override.blank])],
+    ...detected,
+    guide: override.guide ?? detected.guide,
+    templates: override.templates.length ? override.templates : detected.templates,
+    blank: [...new Set([...detected.blank, ...override.blank])],
   };
 }
 
