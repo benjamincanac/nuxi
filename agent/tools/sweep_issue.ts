@@ -1,5 +1,6 @@
 import { defineTool } from "eve/tools";
 
+import { isEnabled } from "../config";
 import { staleQuestions } from "../lib/jev/questions";
 import { getTimeline, listReleases } from "../lib/github";
 import { ask, clip } from "../lib/jev";
@@ -52,7 +53,7 @@ export default defineTool({
         const evidence = issue.comments.findLast((comment) => comment.authorType === "Bot")?.body ?? "";
         patch = { mentions: [{ template: "verify_fixed", detail: clip(evidence.split("\n")[0] ?? "", 200) }] };
       }
-    } else if (context.intakeLabels.some((label) => issue.labels.includes(label)) && daysSince(issue.updatedAt) >= staleDays) {
+    } else if (isEnabled(config, "stale") && context.intakeLabels.some((label) => issue.labels.includes(label)) && daysSince(issue.updatedAt) >= staleDays) {
       const releases = (await listReleases(ref, ctx.abortSignal))
         .filter((release) => release.published_at && release.published_at > issue.createdAt)
         .slice(0, 10)

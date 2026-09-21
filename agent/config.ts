@@ -16,6 +16,7 @@ export const DECISIONS = [
   "a11y",
   "area",
   "pr",
+  "stale",
 ] as const;
 
 export type Decision = (typeof DECISIONS)[number];
