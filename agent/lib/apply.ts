@@ -64,6 +64,20 @@ export interface AppliedActions {
   commentUrl: string | null;
 }
 
+/** Why the model has to rewrite its comment, or `null`. The message tells it what to change. */
+export function commentProblem(plan: TriagePlan, comment: string, reproduction: ReproductionSettings): string | null {
+  const templated = plan.facts.includes("REPRODUCTION_REQUEST") ? reproductionRequest(reproduction) : "";
+  // The request is appended in full. When it is the only fact, a comment that asks for one
+  // says the same thing twice. A run that also found an unusable link still has to explain it.
+  const onlyFact = plan.facts.every((fact) => fact === "REPRODUCTION_REQUEST");
+  if (templated && onlyFact && /reproduc|sandbox|stackblitz|codesandbox|minimal/i.test(comment)) {
+    return "The reproduction request is appended for you, so the comment must not ask for one. Keep one short sentence thanking the reporter, and call apply_triage again.";
+  }
+  const words = countWords(`${comment} ${templated}`);
+  if (words > MAX_COMMENT_WORDS) return `The comment is ${words} words with the appended request, the limit is ${MAX_COMMENT_WORDS}. Shorten it and call apply_triage again.`;
+  return null;
+}
+
 /** The only place that writes to an issue. */
 export async function applyPlan(
   config: RepoConfig,

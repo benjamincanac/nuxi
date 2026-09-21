@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { applyPlan, countWords, MAX_COMMENT_WORDS, reproductionRequest } from "../lib/apply";
+import { applyPlan, commentProblem, MAX_COMMENT_WORDS } from "../lib/apply";
 import { skipReason } from "../lib/context";
 import { emptyPlan, hasWrites } from "../lib/plan";
 import { getPlan } from "../lib/store";
@@ -30,19 +30,9 @@ export default defineTool({
       return { applied: false, reason: "Nothing to do: no decision was taken, the issue stays in triage." };
     }
 
-    const templated = plan.facts.includes("REPRODUCTION_REQUEST") ? reproductionRequest(context.reproduction) : "";
-    // The request is appended in full. When it is the only fact, a comment that asks for one
-    // says the same thing twice. A run that also found an unusable link still has to explain it.
-    const onlyFact = plan.facts.every((fact) => fact === "REPRODUCTION_REQUEST");
-    if (templated && onlyFact && /reproduc|sandbox|stackblitz|codesandbox|minimal/i.test(comment)) {
-      throw new Error(
-        "The reproduction request is appended for you, so the comment must not ask for one. Keep one short sentence thanking the reporter, and call apply_triage again.",
-      );
-    }
-    const words = countWords(`${comment} ${templated}`);
-    if (words > MAX_COMMENT_WORDS) {
-      throw new Error(`The comment is ${words} words with the appended request, the limit is ${MAX_COMMENT_WORDS}. Shorten it and call apply_triage again.`);
-    }
+    // Runs that ask for an approval were already checked before the prompt. Dry runs and fixtures are checked here.
+    const problem = commentProblem(plan, comment, context.reproduction);
+    if (problem) throw new Error(problem);
 
     const actions = await applyPlan(context.config, plan, comment, context.humanLabels, context.issue.labels, context.reproduction, context.intakeLabels);
     return { applied: !actions.dryRun, ...actions };
