@@ -51,7 +51,11 @@ export const classifyQuestions = {
 
 /** Which kind of issue this is, among the ones the repository's issue forms declare. */
 export function kindQuestion(kinds: readonly IssueKind[]) {
-  const criteria: Record<string, string> = {};
+  // Without a way out, a repository with a single form has a one option choice, and every issue is
+  // that kind with full confidence: a feature request opened blank gets asked for a reproduction.
+  const criteria: Record<string, string> = {
+    none: "None of the forms fits: the issue is something else, such as a kind of request the repository has no form for, or there is not enough to tell.",
+  };
   for (const kind of kinds) {
     const marks = [kind.type && `Issue Type ${kind.type}`, kind.labels.length && `labels ${kind.labels.join(", ")}`].filter(Boolean).join(", ");
     criteria[kind.name] = [kind.description, marks && `Marked with ${marks}.`, kind.report ? "Asks for a reproduction: something is broken." : ""].filter(Boolean).join(" ");

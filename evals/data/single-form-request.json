@@ -1,0 +1,62 @@
+{
+  "config": {
+    "dryRun": true,
+    "maintainers": [
+      "maintainer"
+    ],
+    "upstreams": [
+      "unovue/reka-ui",
+      "tailwindlabs/tailwindcss"
+    ],
+    "package": {
+      "name": "@acme/ui"
+    },
+    "nextMajor": "v5",
+    "reproduction": {
+      "blank": [
+        "acme-ui-starter"
+      ]
+    },
+    "securityPolicy": "https://example.com/SECURITY.md",
+    "areas": [
+      {
+        "kind": "component",
+        "names": [
+          "Button",
+          "Select",
+          "SelectMenu",
+          "Modal",
+          "Table",
+          "Input",
+          "Tooltip"
+        ]
+      }
+    ]
+  },
+  "latestVersion": "1.4.0",
+  "issue": {
+    "title": "Add an option to pin columns in the table",
+    "body": "### Description\n\nIt would be great if `UTable` had a `pinned` option per column, so the first column stays visible while the rest scrolls horizontally. Right now this needs custom CSS on every table.\n\n### Additional context\n\nMost data grid libraries ship this. Happy to open a pull request if the API is agreed on.",
+    "author": "mkowalczyk",
+    "authorAssociation": "NONE",
+    "labels": [],
+    "type": null,
+    "createdAt": "2026-08-12T08:45:00Z",
+    "comments": []
+  },
+  "similar": [],
+  "fixedCandidates": [],
+  "upstreamCandidates": [],
+  "reproduction": null,
+  "kinds": [
+    {
+      "name": "Bug report",
+      "description": "Report something that does not work.",
+      "labels": [
+        "bug"
+      ],
+      "report": true
+    }
+  ],
+  "intakeLabels": []
+}
