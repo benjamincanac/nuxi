@@ -6,6 +6,7 @@
     ":maintainLockFilesWeekly",
     ":semanticCommitTypeAll(chore)"
   ],
+  "rangeStrategy": "bump",
   "minimumReleaseAge": "25 hours",
   "schedule": [
     "on Monday"
@@ -14,6 +15,13 @@
     "pnpmDedupe"
   ],
   "packageRules": [
+    {
+      "description": "engines stays on the Node major, bump would pin it to a patch.",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["engines"],
+      "matchDepNames": ["node"],
+      "enabled": false
+    },
     {
       "description": "The action tracks a major of Node and pnpm, not a patch.",
       "matchManagers": ["github-actions"],
