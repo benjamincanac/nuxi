@@ -13,13 +13,13 @@ importers:
         version: 1.38.4
       '@vercel/connect':
         specifier: ^2.3.0
-        version: 2.3.0(ai@7.0.107(zod@4.6.5))(eve@0.58.1(ai@7.0.107(zod@4.6.5))(microsandbox@0.7.2))
+        version: 2.3.0(ai@7.0.107(zod@4.6.5))(eve@0.63.0(ai@7.0.107(zod@4.6.5))(microsandbox@0.7.2))
       ai:
         specifier: ^7.0.107
         version: 7.0.107(zod@4.6.5)
       eve:
-        specifier: ^0.58.1
-        version: 0.58.1(ai@7.0.107(zod@4.6.5))(microsandbox@0.7.2)
+        specifier: ^0.63.0
+        version: 0.63.0(ai@7.0.107(zod@4.6.5))(microsandbox@0.7.2)
       yaml:
         specifier: ^2.9.1
         version: 2.9.1
@@ -558,8 +558,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  eve@0.58.1:
-    resolution: {integrity: sha512-xgitCEwqpj9TQ0negHQ/sdxiXc7Jz0X28/v5fhtQW1CcwPYoeRs6fD4piQPPgaymLXmLamCsHQgHSMR3FunbLg==}
+  eve@0.63.0:
+    resolution: {integrity: sha512-iDv0S4MXvZimaXNTJnyB2THumRQLWQSAgpMcZsGtMNquYQpSKB1+i8sxX4KJOHHCLd04lwD+06xnh+ja7rlZIw==}
     engines: {node: '>=24'}
     hasBin: true
     peerDependencies:
@@ -1006,12 +1006,12 @@ snapshots:
     dependencies:
       execa: 5.1.1
 
-  '@vercel/connect@2.3.0(ai@7.0.107(zod@4.6.5))(eve@0.58.1(ai@7.0.107(zod@4.6.5))(microsandbox@0.7.2))':
+  '@vercel/connect@2.3.0(ai@7.0.107(zod@4.6.5))(eve@0.63.0(ai@7.0.107(zod@4.6.5))(microsandbox@0.7.2))':
     dependencies:
       '@vercel/oidc': 3.8.8
     optionalDependencies:
       ai: 7.0.107(zod@4.6.5)
-      eve: 0.58.1(ai@7.0.107(zod@4.6.5))(microsandbox@0.7.2)
+      eve: 0.63.0(ai@7.0.107(zod@4.6.5))(microsandbox@0.7.2)
 
   '@vercel/oidc@3.2.0': {}
 
@@ -1080,7 +1080,7 @@ snapshots:
       '@esbuild/win32-ia32': 0.28.2
       '@esbuild/win32-x64': 0.28.2
 
-  eve@0.58.1(ai@7.0.107(zod@4.6.5))(microsandbox@0.7.2):
+  eve@0.63.0(ai@7.0.107(zod@4.6.5))(microsandbox@0.7.2):
     dependencies:
       ai: 7.0.107(zod@4.6.5)
       nitro: 3.0.260903-beta
