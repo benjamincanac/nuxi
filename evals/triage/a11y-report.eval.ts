@@ -9,6 +9,6 @@ export default defineEval({
     t.succeeded();
     t.calledTool("classify_issue");
     t.calledTool("apply_triage");
-    t.judge("States that the a11y label was added to the issue.").atLeast(0.7);
+    t.judge("Names the a11y label among the labels added or planned for the issue. A dry-run counts.").atLeast(0.7);
   },
 });

@@ -10,7 +10,7 @@ export default defineEval({
     t.calledTool("classify_issue");
     t.calledTool("apply_triage");
     t.judge(
-      "States that the v5 label was added to the issue.",
+      "Names the v5 label among the labels added or planned for the issue. A dry-run counts.",
     ).atLeast(0.7);
   },
 });
