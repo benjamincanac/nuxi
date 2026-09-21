@@ -5,3 +5,9 @@ export function triagePrompt(fixture: string): string {
     `Load the triage skill and follow it. The repository is in dry-run: run the full pipeline, apply_triage only logs.`
   );
 }
+
+/** The comment `apply_triage` would post, with the appended request and mention. The judge grades this, not the run summary. */
+export function postedComment(turn: { toolCalls: readonly { name: string; output?: unknown }[] }): string {
+  const output = turn.toolCalls.findLast((call) => call.name === "apply_triage" && call.output)?.output;
+  return (output as { comment?: string | null } | undefined)?.comment ?? "";
+}
