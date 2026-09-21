@@ -1,6 +1,24 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    "group:allNonMajor",
+    ":maintainLockFilesWeekly",
+    ":semanticCommitTypeAll(chore)"
+  ],
+  "rangeStrategy": "bump",
+  "minimumReleaseAge": "25 hours",
+  "schedule": [
+    "on Monday"
+  ],
+  "postUpdateOptions": [
+    "pnpmDedupe"
+  ],
+  "packageRules": [
+    {
+      "description": "eve runs everything, so it gets its own revertable pull request.",
+      "matchPackageNames": ["eve"],
+      "groupName": "eve"
+    }
   ]
 }
