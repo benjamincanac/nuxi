@@ -2,7 +2,7 @@ import { kebabCase } from "../../config";
 import { fixedQuestions } from "../jev/questions";
 import type { FixedCandidate, TriageContext } from "../context";
 import { getTimeline, listReleases, searchIssues, type Release } from "../github";
-import { ask, clip } from "../jev";
+import { ask, clip, RECENT_COMMENTS } from "../jev";
 import type { PlanPatch } from "../plan";
 import { issueState } from "./classify";
 
@@ -114,7 +114,7 @@ export async function checkFixedInRelease(
 
   const answers = await ask(
     fixedQuestions(candidates),
-    { issue: issueState(context), candidates: candidates.map(({ id, summary, release }) => ({ id, summary, release })) },
+    { issue: issueState(context, RECENT_COMMENTS), candidates: candidates.map(({ id, summary, release }) => ({ id, summary, release })) },
     signal,
   );
   const fixedBy = candidates.find((candidate) => candidate.id === answers.fixed_by.choice) ?? null;

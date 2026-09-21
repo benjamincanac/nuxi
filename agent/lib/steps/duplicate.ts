@@ -1,7 +1,7 @@
 import { duplicateQuestions } from "../jev/questions";
 import type { SimilarCandidate, TriageContext } from "../context";
 import { searchIssues, type RepoRef } from "../github";
-import { ask, choiceConfidence, clip } from "../jev";
+import { ask, choiceConfidence, clip, RECENT_COMMENTS } from "../jev";
 import type { PlanPatch } from "../plan";
 import { issueState } from "./classify";
 
@@ -60,7 +60,8 @@ export async function checkDuplicate(context: TriageContext, signal?: AbortSigna
 
   const answers = await ask(
     duplicateQuestions(candidates),
-    { issue: issueState(context), candidates: candidates.map(({ number, title, state, body }) => ({ number, title, state, body })) },
+    // Two reports are compared on what they describe, not on their threads.
+    { issue: issueState(context, RECENT_COMMENTS), candidates: candidates.map(({ number, title, state, body }) => ({ number, title, state, body })) },
     signal,
   );
 

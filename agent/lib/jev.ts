@@ -29,6 +29,12 @@ export function choiceConfidence<C extends string>(answer: ChoiceAnswer<C>): num
 const MAX_BODY = 8_000;
 const MAX_COMMENT = 1_500;
 const MAX_COMMENTS = 30;
+/**
+ * What a step gets when it does not read the thread, only the report: the last few comments, in
+ * case one of them corrects the description. The whole thread is thirty comments of evidence a
+ * comparison never uses, sent again at every step.
+ */
+export const RECENT_COMMENTS = 5;
 
 export function clip(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max)}\n[truncated]` : text;
@@ -38,6 +44,8 @@ export function clipBody(text: string): string {
   return clip(text, MAX_BODY);
 }
 
-export function clipComments<T extends { body: string }>(comments: readonly T[]): T[] {
-  return comments.slice(-MAX_COMMENTS).map((comment) => ({ ...comment, body: clip(comment.body, MAX_COMMENT) }));
+export function clipComments<T extends { body: string }>(comments: readonly T[], max = MAX_COMMENTS): T[] {
+  // `slice(-0)` is the whole array, so a budget of none is answered before it.
+  const kept = max <= 0 ? [] : comments.slice(-max);
+  return kept.map((comment) => ({ ...comment, body: clip(comment.body, MAX_COMMENT) }));
 }

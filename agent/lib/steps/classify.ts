@@ -24,14 +24,15 @@ export interface ClassifyOutcome {
   type: string | null;
 }
 
-export function issueState(context: TriageContext) {
+/** `maxComments` is how much of the thread the step reads. It defaults to all of it. */
+export function issueState(context: TriageContext, maxComments?: number) {
   const { issue } = context;
   return {
     title: issue.title,
     body: clipBody(issue.body),
     authorAssociation: issue.authorAssociation,
     existingLabels: issue.labels,
-    comments: clipComments(issue.comments).map((comment) => ({
+    comments: clipComments(issue.comments, maxComments).map((comment) => ({
       author: comment.author,
       authorAssociation: comment.authorAssociation,
       isReporter: comment.author === issue.author,

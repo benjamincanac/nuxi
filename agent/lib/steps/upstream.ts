@@ -3,7 +3,7 @@ import { z } from "zod";
 import { duplicateQuestions } from "../jev/questions";
 import type { SimilarCandidate, TriageContext } from "../context";
 import { gh } from "../github";
-import { ask, choiceConfidence } from "../jev";
+import { ask, choiceConfidence, RECENT_COMMENTS } from "../jev";
 import type { PlanPatch } from "../plan";
 import { listUpstreamPairs, trackUpstreamPair, type UpstreamPair } from "../store";
 import { issueState } from "./classify";
@@ -25,7 +25,7 @@ export async function trackUpstream(context: TriageContext, upstream: string, si
   const candidates = context.fixture?.upstreamCandidates ?? (await findSimilarIssues({ owner, repo }, issue.title, null, 5, signal));
   if (candidates.length === 0) return { answers: null, upstream, match: null, patch: {} };
 
-  const answers = await ask(duplicateQuestions(candidates), { issue: issueState(context), candidates }, signal);
+  const answers = await ask(duplicateQuestions(candidates), { issue: issueState(context, RECENT_COMMENTS), candidates }, signal);
   const match = candidates.find((candidate) => `#${candidate.number}` === answers.duplicate_of.choice) ?? null;
   const confident =
     match !== null &&
