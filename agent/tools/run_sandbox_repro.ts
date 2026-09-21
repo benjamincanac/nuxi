@@ -31,6 +31,8 @@ export default defineTool({
     await updatePlan(runId(ctx), ref, context.config.dryRun, "run_sandbox_repro", {
       sandbox: result,
       facts: reportable ? [`Sandbox: ${result.summary}`] : [],
+      // A bug reproduced on the latest version is confirmed. It no longer waits for triage.
+      removeLabels: result.outcome === "reproduced" || result.outcome === "not_on_next" ? context.intakeLabels : [],
     });
     await recordDecision({
       at: new Date().toISOString(),
