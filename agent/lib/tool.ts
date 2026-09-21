@@ -2,7 +2,7 @@ import type { ApprovalContext, ApprovalStatus } from "eve/tools/approval";
 import { z } from "zod";
 
 import { requireApproval } from "../config";
-import { commentProblem } from "./apply";
+import { commentProblem, reporterText } from "./apply";
 import { FIXTURE_OWNER, loadTriageContext, type TriageContext } from "./context";
 import { loadRepoConfig, type IssueRef } from "./github";
 import { hasWrites } from "./plan";
@@ -51,11 +51,12 @@ export async function writeApproval<T>({ toolInput }: ApprovalContext<T>): Promi
   // An escalated or skipped plan is blocked in `applyPlan`, so it never writes either.
   const plan = await getPlan(input.data);
   if (plan && (plan.escalate || plan.skipped)) return "not-applicable";
-  if (plan && !hasWrites(plan) && !input.data.comment.trim()) return "not-applicable";
+  const comment = reporterText(plan, input.data.comment);
+  if (plan && !hasWrites(plan) && !comment) return "not-applicable";
   if (!requireApproval()) return "not-applicable";
   // A comment the tool would refuse is sent back to the model first. Otherwise the maintainer approves
   // it, the tool throws, and they are asked a second time for the rewrite.
   const context = plan ? await loadTriageContext(input.data).catch(() => null) : null;
-  const problem = plan && context ? commentProblem(plan, input.data.comment, context.reproduction) : null;
+  const problem = plan && context ? commentProblem(plan, comment, context.reproduction) : null;
   return problem ? { type: "denied", reason: problem } : "user-approval";
 }

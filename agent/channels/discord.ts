@@ -2,7 +2,7 @@ import { defaultDiscordAuth, discordChannel, renderInputRequestComponents } from
 import { z } from "zod";
 
 import { env, requireApproval } from "../config";
-import { mentionLine, reproductionRequest } from "../lib/apply";
+import { mentionLine, reporterText, reproductionRequest } from "../lib/apply";
 import { loadTriageContext } from "../lib/context";
 import { discordCredentials } from "../lib/discord";
 import { emptyPlan } from "../lib/plan";
@@ -24,7 +24,8 @@ async function describeWrite(input: unknown, runId: string): Promise<string> {
   const { owner, repo, issueNumber, comment } = parsed.data;
   const ref = { owner, repo, issueNumber };
   const context = await loadTriageContext(ref).catch(() => null);
-  const plan = (await getPlan(ref)) ?? emptyPlan(ref, runId, true);
+  const recorded = await getPlan(ref);
+  const plan = recorded ?? emptyPlan(ref, runId, true);
 
   const lines = [`**[${owner}/${repo}#${issueNumber}](<https://github.com/${owner}/${repo}/issues/${issueNumber}>)**`];
   if (plan.setType) lines.push(`Type: ${plan.setType}`);
@@ -37,7 +38,7 @@ async function describeWrite(input: unknown, runId: string): Promise<string> {
 
   const request = plan.facts.includes("REPRODUCTION_REQUEST") && context ? `\n\n${reproductionRequest(context.reproduction)}` : "";
   const mention = context ? mentionLine(context.config, plan) : "";
-  const body = [comment, request, mention && `\n\n${mention}`].filter(Boolean).join("");
+  const body = [reporterText(recorded, comment), request, mention && `\n\n${mention}`].filter(Boolean).join("");
   if (body) lines.push("", body.length > 900 ? `${body.slice(0, 900)}…` : body);
   return lines.join("\n");
 }

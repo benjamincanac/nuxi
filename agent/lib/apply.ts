@@ -64,6 +64,15 @@ export interface AppliedActions {
   commentUrl: string | null;
 }
 
+/**
+ * The model's text only goes out to convey facts. A triage run that recorded none has nothing to tell
+ * the reporter, and a small model fills the silence with "noted, nothing else needed". Without a
+ * recorded plan the run answers an explicit mention, and its text is the answer.
+ */
+export function reporterText(plan: TriagePlan | null, comment: string): string {
+  return plan && plan.facts.length === 0 ? "" : comment.trim();
+}
+
 /** Why the model has to rewrite its comment, or `null`. The message tells it what to change. */
 export function commentProblem(plan: TriagePlan, comment: string, reproduction: ReproductionSettings): string | null {
   const templated = plan.facts.includes("REPRODUCTION_REQUEST") ? reproductionRequest(reproduction) : "";

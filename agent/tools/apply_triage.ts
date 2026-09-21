@@ -1,7 +1,7 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 
-import { applyPlan, commentProblem, MAX_COMMENT_WORDS } from "../lib/apply";
+import { applyPlan, commentProblem, MAX_COMMENT_WORDS, reporterText } from "../lib/apply";
 import { skipReason } from "../lib/context";
 import { emptyPlan, hasWrites } from "../lib/plan";
 import { getPlan } from "../lib/store";
@@ -19,9 +19,10 @@ export default defineTool({
   }),
   approval: { request: writeApproval },
   label: { start: ({ owner, repo, issueNumber }) => `Apply triage to ${owner}/${repo}#${issueNumber}` },
-  async execute({ comment, ...ref }, ctx) {
+  async execute({ comment: written, ...ref }, ctx) {
     const context = await requireContext(ref, ctx.abortSignal);
     const recorded = await getPlan(ref);
+    const comment = reporterText(recorded, written);
     // Without a plan no tool evaluated the skip rules for this run, so they are evaluated here.
     // The activity guard is off: this path answers an explicit @-mention.
     const plan = recorded ?? { ...emptyPlan(ref, runId(ctx), context.config.dryRun), skipped: skipReason(context, true) };
