@@ -26,7 +26,7 @@ export interface IssueRef extends RepoRef {
 
 /**
  * Which installation to mint a token from. The app is installed once per account, and every webhook
- * says which installation it came from, so the map builds itself. An account nuxi has not heard
+ * says which installation it came from, so the map builds itself. An account tia has not heard
  * from yet falls back to the connector's default installation.
  */
 const installationCache = new Map<string, string>();
@@ -56,7 +56,7 @@ export async function noteInstallation(owner: string, installationId: number | u
 
 export async function githubToken(owner?: string): Promise<string> {
   // Scripts run outside Vercel and may use a personal token instead of Connect.
-  const script = env("NUXI_SCRIPT_TOKEN");
+  const script = env("TIA_SCRIPT_TOKEN");
   if (script) return script;
   return getToken(githubConnector(), tokenParams(owner ? await connectInstallationId(owner) : undefined));
 }
@@ -67,12 +67,12 @@ const lastRefresh = new Map<string, number>();
 /**
  * An installation token is scoped to the repositories selected when it was minted, and Connect
  * caches it for its lifetime. Adding a repository to the installation would otherwise answer 404
- * until the cache expired or the deployment was replaced. A missing file is a 404 too, and nuxi
+ * until the cache expired or the deployment was replaced. A missing file is a 404 too, and tia
  * reads a config file from every repository it looks at, so this runs at most once per owner
  * per cooldown and returns false the rest of the time.
  */
 async function forgetToken(owner?: string): Promise<boolean> {
-  if (env("NUXI_SCRIPT_TOKEN")) return false;
+  if (env("TIA_SCRIPT_TOKEN")) return false;
   const key = owner ?? "";
   const previous = lastRefresh.get(key) ?? 0;
   if (Date.now() - previous < REFRESH_COOLDOWN_MS) return false;
@@ -127,7 +127,7 @@ async function rawRequest(path: string, options: RequestOptions = {}): Promise<R
         accept: options.accept ?? "application/vnd.github+json",
         authorization: `Bearer ${token}`,
         "x-github-api-version": "2022-11-28",
-        "user-agent": "nuxi-triage",
+        "user-agent": "tia-triage",
         ...(options.body === undefined ? {} : { "content-type": "application/json" }),
       },
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
@@ -350,7 +350,7 @@ const installationRepositoriesSchema = z.object({
 /**
  * Repositories every known installation can access. A repo without a valid config file is ignored
  * later. `/installation/repositories` answers for the installation the token belongs to, so an
- * account nuxi has heard from is listed under its own token and the rest under the default one.
+ * account tia has heard from is listed under its own token and the rest under the default one.
  */
 export async function listInstalledRepositories(signal?: AbortSignal): Promise<RepoRef[]> {
   const owners = [undefined, ...Object.keys(await listInstallations())];
@@ -368,10 +368,10 @@ export async function listInstalledRepositories(signal?: AbortSignal): Promise<R
     .map((repo) => ({ owner: repo.owner.login, repo: repo.name }));
 }
 
-/** Installed repositories with a valid `.github/nuxi.yml`. */
+/** Installed repositories with a valid `.github/tia.yml`. */
 export async function listEnabledRepositories(signal?: AbortSignal): Promise<RepoConfig[]> {
   // Public repos can be followed read-only before the app is installed on them.
-  const extra = (env("NUXI_EXTRA_REPOS") ?? "")
+  const extra = (env("TIA_EXTRA_REPOS") ?? "")
     .split(",")
     .map((slug) => slug.trim().split("/"))
     .filter((parts): parts is [string, string] => parts.length === 2 && Boolean(parts[0]) && Boolean(parts[1]))
@@ -506,11 +506,11 @@ const areaCache = new Map<string, { expires: number; value: Area[] }>();
 /** Returns `null` when the file is missing or invalid, which disables triage for the repo. */
 /**
  * A GitHub App that has to be installable on another organization is public, so anyone can install
- * it. `NUXI_ALLOWED_OWNERS` lists the accounts nuxi answers to, and everything else is ignored as if
+ * it. `TIA_ALLOWED_OWNERS` lists the accounts tia answers to, and everything else is ignored as if
  * it had no config file. Unset, every installation is answered, which is what a private app wants.
  */
 function isAllowedOwner(owner: string): boolean {
-  const allowed = (env("NUXI_ALLOWED_OWNERS") ?? "").split(",").map((name) => name.trim().toLowerCase()).filter(Boolean);
+  const allowed = (env("TIA_ALLOWED_OWNERS") ?? "").split(",").map((name) => name.trim().toLowerCase()).filter(Boolean);
   return allowed.length === 0 || allowed.includes(owner.toLowerCase());
 }
 
@@ -528,7 +528,7 @@ export async function loadRepoConfig(ref: RepoRef, signal?: AbortSignal): Promis
   if (source !== null) {
     const parsed = parseRepoConfig(source);
     if (parsed.ok) value = resolveRepoConfig(ref.owner, ref.repo, parsed.config);
-    else console.warn(`[nuxi] invalid ${CONFIG_PATH} in ${key}, triage disabled:\n${parsed.error}`);
+    else console.warn(`[tia] invalid ${CONFIG_PATH} in ${key}, triage disabled:\n${parsed.error}`);
   }
   configCache.set(key, { expires: Date.now() + CACHE_TTL_MS, value });
   return value;

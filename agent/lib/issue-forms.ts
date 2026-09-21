@@ -7,7 +7,7 @@ import { gh, ghText } from "./github";
 /**
  * What a repository already says about reproductions in its issue forms: where to start from,
  * which guide to read, which field holds the link, which field holds the version.
- * Read from `.github/ISSUE_TEMPLATE/*.yml` so none of it has to be repeated in `.github/nuxi.yml`.
+ * Read from `.github/ISSUE_TEMPLATE/*.yml` so none of it has to be repeated in `.github/tia.yml`.
  */
 export interface ReproductionSettings {
   guide: string | null;

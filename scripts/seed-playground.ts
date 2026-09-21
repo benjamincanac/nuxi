@@ -6,7 +6,7 @@
  *                                    [--issues 1,2,3] [--dry-run]
  *
  * Copies title, body, labels (created in the target if missing) and comments, rendered as
- * quoted blocks. Idempotent: every copy carries a hidden `<!-- nuxi-seed:owner/repo#n -->`
+ * quoted blocks. Idempotent: every copy carries a hidden `<!-- tia-seed:owner/repo#n -->`
  * marker in its body, and issues already carrying that marker are skipped on a rerun.
  *
  * Without `--issues`, picks a mix: some `triage`, some `needs reproduction`, some
@@ -25,14 +25,14 @@ import { gh, getIssue, searchIssues, type Issue, type IssueComment, type RepoRef
 
 
 function resolveToken(): void {
-  if (process.env.NUXI_SCRIPT_TOKEN) return;
+  if (process.env.TIA_SCRIPT_TOKEN) return;
   if (process.env.GITHUB_TOKEN) {
-    process.env.NUXI_SCRIPT_TOKEN = process.env.GITHUB_TOKEN;
+    process.env.TIA_SCRIPT_TOKEN = process.env.GITHUB_TOKEN;
     return;
   }
   try {
     const token = execFileSync("gh", ["auth", "token"], { encoding: "utf8" }).trim();
-    if (token) process.env.NUXI_SCRIPT_TOKEN = token;
+    if (token) process.env.TIA_SCRIPT_TOKEN = token;
   } catch {
     // No token available. Requests below fail with a clear GitHub auth error.
   }
@@ -61,7 +61,7 @@ function quoteComment(comment: IssueComment): string {
 }
 
 function marker(from: RepoRef, issueNumber: number): string {
-  return `<!-- nuxi-seed:${from.owner}/${from.repo}#${issueNumber} -->`;
+  return `<!-- tia-seed:${from.owner}/${from.repo}#${issueNumber} -->`;
 }
 
 function buildBody(from: RepoRef, issue: Issue): string {
@@ -127,7 +127,7 @@ async function loadExistingMarkers(owner: string, repo: string): Promise<Set<str
     );
     for (const issue of batch) {
       if (issue.pull_request !== undefined) continue;
-      const match = issue.body?.match(/<!-- nuxi-seed:(\S+) -->/);
+      const match = issue.body?.match(/<!-- tia-seed:(\S+) -->/);
       if (match?.[1]) markers.add(match[1]);
     }
     if (batch.length < 100) break;

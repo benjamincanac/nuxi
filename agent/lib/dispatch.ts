@@ -101,10 +101,10 @@ export async function drainAndDispatch(to: ScheduleToFn, auth: Auth, limit: numb
       const attempts = (item.attempts ?? 0) + 1;
       if (attempts >= MAX_DISPATCH_ATTEMPTS) {
         // A deleted issue or a removed config fails forever. The daily sweep re-queues what still matters.
-        console.error(`[nuxi] dispatch failed ${attempts} times for ${target(item)}, dropped`, error);
+        console.error(`[tia] dispatch failed ${attempts} times for ${target(item)}, dropped`, error);
         continue;
       }
-      console.error(`[nuxi] dispatch failed for ${target(item)}, attempt ${attempts}`, error);
+      console.error(`[tia] dispatch failed for ${target(item)}, attempt ${attempts}`, error);
       await enqueue({ ...item, attempts, notBefore: Date.now() + attempts * 10 * 60_000 });
     }
   }
@@ -127,7 +127,7 @@ export async function dispatch(to: ScheduleToFn, auth: Auth, item: QueueItem): P
   if (item.dryRun) await forceDryRun(item);
   if (needsApproval && !approvals) {
     // On the GitHub channel an approval prompt would be posted as a public comment. Never do that.
-    console.warn(`[nuxi] ${target(item)}: approvals are required but no Discord approvals channel is configured, running dry.`);
+    console.warn(`[tia] ${target(item)}: approvals are required but no Discord approvals channel is configured, running dry.`);
     await forceDryRun(item);
   }
 

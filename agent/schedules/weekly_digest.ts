@@ -24,7 +24,7 @@ export default defineSchedule({
           // One failing repository must not stop the others.
           await buildDigest(config)
             .then((digest) => postEmbeds(config.discord.digestChannel, digestEmbeds(digest)))
-            .catch((error: unknown) => console.error(`[nuxi] digest failed for ${config.owner}/${config.repo}`, error));
+            .catch((error: unknown) => console.error(`[tia] digest failed for ${config.owner}/${config.repo}`, error));
         }
       })(),
     );

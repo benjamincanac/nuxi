@@ -28,16 +28,16 @@ export default defineSchedule({
         for (const config of enabled) {
           // One failing repository must not stop the others, nor the setup pass below.
           const summary = await sweepRepo(config).catch((error: unknown) => ({ repo: `${config.owner}/${config.repo}`, failed: String(error) }));
-          console.log("[nuxi] sweep", JSON.stringify(summary));
+          console.log("[tia] sweep", JSON.stringify(summary));
         }
 
-        if (env("NUXI_AUTO_SETUP") === "false") return;
+        if (env("TIA_AUTO_SETUP") === "false") return;
         const installed = await listInstalledRepositories();
         if (installed.length > AUTO_SETUP_MAX_REPOSITORIES) return;
         for (const ref of installed) {
           // Idempotent: repos with a config file or a past setup PR, merged or closed, are left alone.
           const result = await openSetupPullRequest(ref).catch((error: unknown) => ({ status: "failed", reason: String(error) }));
-          if (result.status !== "configured" && result.status !== "exists") console.log(`[nuxi] setup ${ref.owner}/${ref.repo}`, JSON.stringify(result));
+          if (result.status !== "configured" && result.status !== "exists") console.log(`[tia] setup ${ref.owner}/${ref.repo}`, JSON.stringify(result));
         }
       })(),
     );

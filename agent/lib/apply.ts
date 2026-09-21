@@ -148,7 +148,7 @@ export async function applyPlan(
       await setLastAnnounced(plan.issue, fingerprint);
     }
   } else {
-    console.log(`[nuxi] ${plan.dryRun ? "dry-run" : "blocked"} ${plan.issue.owner}/${plan.issue.repo}#${plan.issue.issueNumber}`, JSON.stringify(actions));
+    console.log(`[tia] ${plan.dryRun ? "dry-run" : "blocked"} ${plan.issue.owner}/${plan.issue.repo}#${plan.issue.issueNumber}`, JSON.stringify(actions));
   }
 
   await recordDecision({

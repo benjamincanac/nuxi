@@ -1,22 +1,22 @@
 # Roadmap
 
-Nothing here is built. It is what running nuxi for a whole organization would take, written down while it was fresh. [`README.md`](README.md) and [`SETUP.md`](SETUP.md) describe what exists.
+Nothing here is built. It is what running tia for a whole organization would take, written down while it was fresh. [`README.md`](README.md) and [`SETUP.md`](SETUP.md) describe what exists.
 
-## Running nuxi for an organization
+## Running tia for an organization
 
-nuxi runs today as one person's deployment: the GitHub App, the Vercel project and the Discord app all belong to a single account, and every repository it triages bills that account. This is what changes when several maintainers use it on their own repositories. Nothing here is required for a single maintainer, and nothing in the agent code needs to know which organization it serves.
+tia runs today as one person's deployment: the GitHub App, the Vercel project and the Discord app all belong to a single account, and every repository it triages bills that account. This is what changes when several maintainers use it on their own repositories. Nothing here is required for a single maintainer, and nothing in the agent code needs to know which organization it serves.
 
 ### What already works
 
 | Need | How |
 | --- | --- |
-| A new repository | Install the app, merge `.github/nuxi.yml`. Nothing to deploy. |
-| A new account | Add its login to `NUXI_ALLOWED_OWNERS`. Installations are learned from the first webhook. |
+| A new repository | Install the app, merge `.github/tia.yml`. Nothing to deploy. |
+| A new account | Add its login to `TIA_ALLOWED_OWNERS`. Installations are learned from the first webhook. |
 | Their own approvals and digest | `discord.approvalsChannel` and `discord.digestChannel` in their repository's config. |
 | Who can approve | Whoever can see that channel. |
 | Their own thresholds | `thresholds` in their repository's config. |
 
-A maintainer who owns a repository under an allowed account can therefore adopt nuxi without asking anyone, which is the property to preserve.
+A maintainer who owns a repository under an allowed account can therefore adopt tia without asking anyone, which is the property to preserve.
 
 ### What has to change
 
@@ -24,9 +24,9 @@ A maintainer who owns a repository under an allowed account can therefore adopt 
 
 Transfer the GitHub App to the organization, and the Vercel project with it. Today an install on a repository someone else owns needs an owner of that account to approve a request from a personal app, and every run bills a personal account. An organization owned app is installed by the people who already administer the repositories, and the bill lands where the usage does.
 
-The connector holds the app's private key, so the transfer is a Connect operation, not a code change. `GITHUB_CONNECTOR` already overrides the connector nuxi uses, so a new one is a variable away.
+The connector holds the app's private key, so the transfer is a Connect operation, not a code change. `GITHUB_CONNECTOR` already overrides the connector tia uses, so a new one is a variable away.
 
-Keep `NUXI_ALLOWED_OWNERS` set to the organization even then. A public app can be installed by anyone, and the allow-list is what keeps a stranger's installation from reaching the maintainers' Discord.
+Keep `TIA_ALLOWED_OWNERS` set to the organization even then. A public app can be installed by anyone, and the allow-list is what keeps a stranger's installation from reaching the maintainers' Discord.
 
 #### 2. Discord as a shared surface
 
@@ -45,7 +45,7 @@ Either way the list stops being deployment state. The same reasoning applies as 
 
 #### 4. Visibility while a repository is dry running
 
-`/ops/decisions` is behind a single shared secret, so today a maintainer cannot see what nuxi decided on their own repository without asking the person who holds it. Dry running is the whole point of the adoption path, so this is the gap that will be felt first.
+`/ops/decisions` is behind a single shared secret, so today a maintainer cannot see what tia decided on their own repository without asking the person who holds it. Dry running is the whole point of the adoption path, so this is the gap that will be felt first.
 
 The cheapest fix is `/ask`: the backlog conversation already runs per repository and already knows who is asking. "What did you decide on nuxt/ui this week" is the same query without a new endpoint, a new secret or a new UI.
 
@@ -53,7 +53,7 @@ The cheapest fix is `/ask`: the backlog conversation already runs per repository
 
 What costs money per issue is the Jev calls, one per pipeline step, each carrying the issue and its comments again.
 
-Before this is open to every repository in an organization, the digest should report what the week cost. A team that adopts nuxi should be able to see its own bill.
+Before this is open to every repository in an organization, the digest should report what the week cost. A team that adopts tia should be able to see its own bill.
 
 ### Rollout order
 
@@ -67,7 +67,7 @@ Steps 1 and 2 need no code. Everything after them is the work.
 
 ## Retiring the playground
 
-The playground is a test bench, not a part of nuxi. It is the only repository where a run can go from the webhook to a Discord approval to a real write without touching a real backlog, and that is what makes an eve upgrade safe to check. eve still ships breaking minors every few days, so it stays for now.
+The playground is a test bench, not a part of tia. It is the only repository where a run can go from the webhook to a Discord approval to a real write without touching a real backlog, and that is what makes an eve upgrade safe to check. eve still ships breaking minors every few days, so it stays for now.
 
 Since the issue kinds are read from the issue forms, it runs in label mode on purpose: two forms of its own that mark a bug with `bug` and a request with `enhancement`, no Issue Type, and `source` turned off so those forms are the ones read. `nuxt/ui` covers the Issue Type path, so the playground is the only place that covers this one. Areas are empty there as a result, and the seeded issues no longer count as waiting for triage.
 
@@ -79,7 +79,7 @@ It can go once two things are true: eve upgrades stop breaking the agent, and `n
 | --- | --- |
 | The `pnpm seed` row | [`README.md`](README.md) |
 | The seed script and its `seed` entry | [`scripts/seed-playground.ts`](scripts/seed-playground.ts), `package.json` |
-| The playground config | [`examples/playground.nuxi.yml`](examples/playground.nuxi.yml) |
+| The playground config | [`examples/playground.tia.yml`](examples/playground.tia.yml) |
 | Step 4, and the playground wording in steps 5, 7 and 9 | [`SETUP.md`](SETUP.md) |
 | The production app's installation on the playground | GitHub |
 

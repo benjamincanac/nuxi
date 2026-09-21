@@ -4,7 +4,7 @@ description: Use when classify_issue returns an upstream, to map the label to th
 
 # Upstream repositories
 
-The list of upstreams is not fixed. Each repository declares its own under `upstreams` in `.github/nuxi.yml`, as `owner/repo` slugs. The label is `upstream/<repo>`, for example `unovue/reka-ui` becomes `upstream/reka-ui`.
+The list of upstreams is not fixed. Each repository declares its own under `upstreams` in `.github/tia.yml`, as `owner/repo` slugs. The label is `upstream/<repo>`, for example `unovue/reka-ui` becomes `upstream/reka-ui`.
 
 ## Procedure
 

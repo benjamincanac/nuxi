@@ -104,7 +104,7 @@ export default discordChannel({
       if (interactionToken || !conversationId) return;
       const answer = event.status === "rejected" ? "Cancelled" : event.status === "completed" && wasApproved(event.result.output) ? "Approved" : null;
       const components = answer
-        ? [{ type: 1, components: [{ type: 2, style: answer === "Approved" ? 3 : 2, label: answer, custom_id: "nuxi:answered", disabled: true }] }]
+        ? [{ type: 1, components: [{ type: 2, style: answer === "Approved" ? 3 : 2, label: answer, custom_id: "tia:answered", disabled: true }] }]
         : [];
       await channel.discord
         .request(`/channels/${channelId}/messages/${conversationId}`, { components }, { botAuth: true, method: "PATCH" })

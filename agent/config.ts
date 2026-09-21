@@ -1,7 +1,7 @@
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
-export const CONFIG_PATH = ".github/nuxi.yml";
+export const CONFIG_PATH = ".github/tia.yml";
 
 export const DECISIONS = [
   "type",
@@ -127,7 +127,7 @@ export type ParsedConfig =
   | { ok: true; config: RepoConfigFile }
   | { ok: false; error: string };
 
-/** Parses and validates the raw YAML of a `.github/nuxi.yml` file. */
+/** Parses and validates the raw YAML of a `.github/tia.yml` file. */
 export function parseRepoConfig(source: string): ParsedConfig {
   let raw: unknown;
   try {
@@ -209,18 +209,18 @@ export function env(name: string): string | undefined {
 export function githubConnector(): string {
   const override = env("GITHUB_CONNECTOR");
   if (override) return override;
-  return isProduction() ? "github/nuxi" : "github/nuxi-preview";
+  return isProduction() ? "github/tia" : "github/tia-preview";
 }
 
 export function discordConnector(): string {
-  return env("DISCORD_CONNECTOR") ?? "discord/nuxi";
+  return env("DISCORD_CONNECTOR") ?? "discord/tia";
 }
 
 export function isProduction(): boolean {
   return env("VERCEL_ENV") === "production";
 }
 
-/** Write tools pause for a maintainer unless `NUXI_REQUIRE_APPROVAL=false`. */
+/** Write tools pause for a maintainer unless `TIA_REQUIRE_APPROVAL=false`. */
 export function requireApproval(): boolean {
-  return env("NUXI_REQUIRE_APPROVAL") !== "false";
+  return env("TIA_REQUIRE_APPROVAL") !== "false";
 }

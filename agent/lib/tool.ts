@@ -21,7 +21,7 @@ export function runId(ctx: { session: { id: string; turn: { id: string } } }): s
 
 export async function requireContext(ref: IssueRef, signal?: AbortSignal): Promise<TriageContext> {
   const context = await loadTriageContext(ref, signal);
-  if (!context) throw new Error(`Triage is disabled for ${ref.owner}/${ref.repo}: no valid .github/nuxi.yml.`);
+  if (!context) throw new Error(`Triage is disabled for ${ref.owner}/${ref.repo}: no valid .github/tia.yml.`);
   if (!context.config.dryRun && (await isDryRunForced(ref))) context.config = { ...context.config, dryRun: true };
   return context;
 }

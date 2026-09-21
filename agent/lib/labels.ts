@@ -16,7 +16,7 @@ const MANAGED: Record<string, LabelStyle> = {
 };
 
 /**
- * Color and description for a label nuxi is about to apply, or `null` when the label is not one of its own.
+ * Color and description for a label tia is about to apply, or `null` when the label is not one of its own.
  * Labels are created on first use. There is no setup step: a repository only ever gets the labels it needs.
  */
 export function labelStyle(config: RepoConfig, label: string): LabelStyle | null {

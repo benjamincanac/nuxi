@@ -17,7 +17,7 @@ import { enqueue, listDecisions, listInstallations } from "../lib/store";
 const OPS_AUTH = {
   authenticator: "ops",
   principalType: "service",
-  principalId: "nuxi:ops",
+  principalId: "tia:ops",
   attributes: {},
 } as const;
 
@@ -70,7 +70,7 @@ export default defineChannel({
         const visible = await gh(z.object({ full_name: z.string(), private: z.boolean() }), `/repos/${owner}/${repo}`).catch(
           (error: unknown) => String(error),
         );
-        const raw = process.env.NUXI_REQUIRE_APPROVAL;
+        const raw = process.env.TIA_REQUIRE_APPROVAL;
         return Response.json({
           environment: env("VERCEL_ENV") ?? "local",
           connector,
@@ -88,7 +88,7 @@ export default defineChannel({
       }
 
       const config = await loadRepoConfig({ owner, repo });
-      if (!config) return Response.json({ error: `Triage is disabled for ${body.data.repo}: no valid .github/nuxi.yml.` }, { status: 404 });
+      if (!config) return Response.json({ error: `Triage is disabled for ${body.data.repo}: no valid .github/tia.yml.` }, { status: 404 });
       const explicit = body.data.write;
       const production = isProduction();
 

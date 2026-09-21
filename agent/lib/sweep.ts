@@ -5,7 +5,7 @@ import { closedUpstreamPairs } from "./steps/upstream";
 import { alreadyEvaluated, enqueue, getClassified, getLastSeenRelease, setLastSeenRelease, trackUpstreamPair, type Classified, type QueueItem } from "./store";
 
 const DAY_MS = 24 * 60 * 60_000;
-/** Labels nuxi applies that wait on someone. The intake labels of the repository are swept too. */
+/** Labels tia applies that wait on someone. The intake labels of the repository are swept too. */
 const SWEEP_LABELS = ["needs reproduction", "needs verification"];
 
 /** Sessions started per minute by `schedules/dispatch_queue`. */
@@ -15,7 +15,7 @@ export const DISPATCH_BATCH = 5;
  * A release re-opens one question and one only: is this fixed. It is worth asking about an open
  * report of the repository's own, and not about an issue that already waits on someone.
  * What classification remembered wins: it also knows the issues a maintainer took over, and the
- * kind of an issue the repository does not mark. An issue nuxi never classified is judged on its marks.
+ * kind of an issue the repository does not mark. An issue tia never classified is judged on its marks.
  */
 export function releaseCheckApplies(
   config: RepoConfig,

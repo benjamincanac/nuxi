@@ -1,7 +1,7 @@
 /**
- * Validates a repo's `.github/nuxi.yml` against the config schema.
+ * Validates a repo's `.github/tia.yml` against the config schema.
  *
- *   pnpm validate-config [path]   (default .github/nuxi.yml)
+ *   pnpm validate-config [path]   (default .github/tia.yml)
  *
  * Exits 1 and prints a prettified zod error on failure. On success prints the resolved
  * config, defaults included.
@@ -14,7 +14,7 @@ import { CONFIG_PATH, parseRepoConfig } from "../agent/config";
 function printUsage(): void {
   console.log(
     "Usage: pnpm validate-config [path]\n\n" +
-      "Validates a nuxi.yml config file against the schema. Defaults to .github/nuxi.yml.",
+      "Validates a tia.yml config file against the schema. Defaults to .github/tia.yml.",
   );
 }
 

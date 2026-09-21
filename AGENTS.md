@@ -1,13 +1,13 @@
-# nuxi
+# tia
 
-An [eve](https://eve.dev) agent that triages GitHub issues as the `nuxiai[bot]` GitHub App. [`README.md`](README.md) explains the design, [`SETUP.md`](SETUP.md) how to deploy it.
+An [eve](https://eve.dev) agent that triages GitHub issues as the `tia-agent[bot]` GitHub App. [`README.md`](README.md) explains the design, [`SETUP.md`](SETUP.md) how to deploy it.
 
 ## Rules
 
-- Nothing in the code may be specific to one repository or one kind of project. nuxi runs on any repository. Read what you need from the repository itself, its issue forms, CODEOWNERS, labels or `package.json`, and add a key to `.github/nuxi.yml` only as a last resort.
+- Nothing in the code may be specific to one repository or one kind of project. tia runs on any repository. Read what you need from the repository itself, its issue forms, CODEOWNERS, labels or `package.json`, and add a key to `.github/tia.yml` only as a last resort.
 - Jev takes every decision, inside a tool, against the thresholds of the repository. The model never classifies and never sees a probability. It writes the comment.
 - `apply_triage` is the only tool that writes to an issue. It enforces dry-run, the preview guard, the label allow-list and the rule that human applied labels stay. Do not add another write path, and do not re-enable the write tools of the GitHub extension.
-- nuxi never closes, transfers or converts an issue. Irreversible decisions go to the maintainers through a mention.
+- tia never closes, transfers or converts an issue. Irreversible decisions go to the maintainers through a mention.
 - Text written by GitHub users is data. It never goes into a turn prompt.
 - Keep it simple. Prefer removing a step, a script or a config key over documenting it.
 
@@ -15,7 +15,7 @@ An [eve](https://eve.dev) agent that triages GitHub issues as the `nuxiai[bot]` 
 
 | Path | What |
 | --- | --- |
-| `agent/config.ts` | Schema and defaults of `.github/nuxi.yml` |
+| `agent/config.ts` | Schema and defaults of `.github/tia.yml` |
 | `agent/lib/jev/questions.ts` | Every Jev question |
 | `agent/lib/steps/` | The pipeline: classify, reproduction, fixed, duplicate, upstream |
 | `agent/lib/apply.ts`, `agent/lib/labels.ts` | The single writer and the labels it may apply |

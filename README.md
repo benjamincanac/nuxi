@@ -1,6 +1,6 @@
-# nuxi
+# tia
 
-An [eve](https://eve.dev) agent that triages GitHub issues. It runs as the `nuxiai[bot]` GitHub App through [Vercel Connect](https://vercel.com/docs/connect) and triages new issues by taking one decision per issue.
+An [eve](https://eve.dev) agent that triages GitHub issues. It runs as the `tia-agent[bot]` GitHub App through [Vercel Connect](https://vercel.com/docs/connect) and triages new issues by taking one decision per issue.
 
 It never closes, transfers or converts an issue, and never removes a label a human applied. Anything irreversible is handed to the maintainers with an @-mention.
 
@@ -15,7 +15,7 @@ classify_issue ─▶ track_upstream ─▶ validate_reproduction
 ```
 
 - Every decision is taken by Jev (`typesafe-ai/jev`) inside a tool and compared with the repository's thresholds. The model never classifies and never sees a probability. It only follows the skill and writes the comment, so it is a cheap one, see [`agent/agent.ts`](agent/agent.ts). Questions live in [`agent/lib/jev/questions.ts`](agent/lib/jev/questions.ts).
-- The model sees only nuxi's own tools. eve's built-ins are off and there is no GitHub tool library: the pipeline tools read GitHub themselves, and `search_issues` covers a maintainer's questions.
+- The model sees only tia's own tools. eve's built-ins are off and there is no GitHub tool library: the pipeline tools read GitHub themselves, and `search_issues` covers a maintainer's questions.
 - [`apply_triage`](agent/tools/apply_triage.ts) is the only tool that writes to an issue. It enforces dry-run, one comment of 80 words per run, the label allow-list, and the rule that human applied labels stay.
 - Runs that need an approval happen in a Discord channel, with Approve and Cancel buttons. Without that channel they are forced to dry-run.
 - Text written by GitHub users never reaches the model's prompt. An @-mention is reduced by Jev to "triage request or not".
@@ -23,7 +23,7 @@ classify_issue ─▶ track_upstream ─▶ validate_reproduction
 
 ## Configuration
 
-Each repository owns its config in `.github/nuxi.yml`. A repository without a valid file is ignored. Only `maintainers` is required.
+Each repository owns its config in `.github/tia.yml`. A repository without a valid file is ignored. Only `maintainers` is required.
 
 ```yaml
 dryRun: true                  # default. Log what would be done, write nothing.
@@ -50,15 +50,15 @@ Global settings are environment variables, listed in [`.env.example`](.env.examp
 
 ## Setup pull request
 
-When the app is installed on a repository without the file, nuxi opens one pull request from a `nuxi/setup` branch. It contains a config detected from the repository, with `dryRun: true`, and removes the workflows nuxi replaces: `Hebilicious/reproduire`, and `actions/stale` jobs that only target nuxi's labels. Closing the PR is a final no.
+When the app is installed on a repository without the file, tia opens one pull request from a `tia/setup` branch. It contains a config detected from the repository, with `dryRun: true`, and removes the workflows tia replaces: `Hebilicious/reproduire`, and `actions/stale` jobs that only target tia's labels. Closing the PR is a final no.
 
 There is no install webhook, so the daily sweep opens it. `POST /ops/setup/trigger` opens it right away, and `pnpm propose-setup <owner/repo>` previews it.
 
 ## Labels
 
-Nothing to set up. nuxi creates a label the first time it applies it and never edits an existing one. It can apply `duplicate`, `answered`, `question`, `needs verification`, `needs reproduction`, `a11y`, `stale`, the next major label and `upstream/<repo>`. It only removes the labels that several issue forms of the repository apply, such as `triage`. A repository without such a label has nothing to remove.
+Nothing to set up. tia creates a label the first time it applies it and never edits an existing one. It can apply `duplicate`, `answered`, `question`, `needs verification`, `needs reproduction`, `a11y`, `stale`, the next major label and `upstream/<repo>`. It only removes the labels that several issue forms of the repository apply, such as `triage`. A repository without such a label has nothing to remove.
 
-The kind of issue is read from the forms too. Each form says how the repository marks it, with an Issue Type, with labels such as `bug`, or with both, and nuxi marks an unmarked issue the same way. The form with a reproduction field is the one that gets the reproduction and fixed checks. A repository without forms gets neither type nor label.
+The kind of issue is read from the forms too. Each form says how the repository marks it, with an Issue Type, with labels such as `bug`, or with both, and tia marks an unmarked issue the same way. The form with a reproduction field is the one that gets the reproduction and fixed checks. A repository without forms gets neither type nor label.
 
 ## Commands
 
@@ -68,7 +68,7 @@ The kind of issue is read from the forms too. Each form says how the repository 
 | `pnpm eval triage/<name>` | One eval |
 | `pnpm eval` | Runs the [evals](evals), which call Jev and the model but never GitHub |
 | `pnpm typecheck`, `pnpm build` | Validation |
-| `pnpm validate-config [file]` | Checks a `nuxi.yml`, `.github/nuxi.yml` by default |
+| `pnpm validate-config [file]` | Checks a `tia.yml`, `.github/tia.yml` by default |
 | `pnpm propose-setup <owner/repo>` | Prints the setup pull request, writes nothing |
 | `pnpm seed --from <repo> --to <repo>` | Copies issues into a playground |
 | `pnpm backfill <owner/repo>` | Dry-runs a whole backlog into `backfill.csv` |
@@ -82,4 +82,4 @@ The kind of issue is read from the forms too. Each form says how the repository 
 | `daily_sweep` | 03:00 UTC | Re-evaluates waiting issues, follows up on `needs reproduction` at 14 days and mentions maintainers at 30, re-checks open reports for a fix when a release is published, picks up closed upstream issues and new installs |
 | `weekly_digest` | Monday 09:00 Paris | One Discord message per repository |
 
-`POST /ops/<triage|sweep|backfill|digest|setup|check>/trigger` and `GET /ops/decisions` are protected by `INTERNAL_API_SECRET`. A preview deployment never writes unless the request carries `"write": true` and approvals are off for Preview with `NUXI_REQUIRE_APPROVAL=false`.
+`POST /ops/<triage|sweep|backfill|digest|setup|check>/trigger` and `GET /ops/decisions` are protected by `INTERNAL_API_SECRET`. A preview deployment never writes unless the request carries `"write": true` and approvals are off for Preview with `TIA_REQUIRE_APPROVAL=false`.

@@ -5,7 +5,7 @@ import { CONFIG_PATH, parseRepoConfig, type RepoConfigInput } from "../config";
 import { gh, ghText, GitHubRequestError, type RepoRef } from "./github";
 import { intakeLabelsFromForms } from "./issue-forms";
 
-export const SETUP_BRANCH = "nuxi/setup";
+export const SETUP_BRANCH = "tia/setup";
 
 /**
  * Only a layout fact is proposed as areas: a monorepo's packages. What else counts as an area depends
@@ -107,12 +107,12 @@ export function inspectWorkflow(path: string, sha: string, source: string, intak
   const uses = [...source.matchAll(/uses:\s*([\w.-]+\/[\w.-]+)/g)].map((match) => (match[1] ?? "").toLowerCase());
 
   if (uses.includes("hebilicious/reproduire")) {
-    return { path, sha, action: "remove", reason: "Posts the reproduction request. nuxi posts its own when it applies `needs reproduction`, keeping both means two comments." };
+    return { path, sha, action: "remove", reason: "Posts the reproduction request. tia posts its own when it applies `needs reproduction`, keeping both means two comments." };
   }
 
   if (uses.includes("actions/stale")) {
     const targets = [...listOption(source, "only-labels"), ...listOption(source, "any-of-labels"), ...listOption(source, "only-issue-labels"), ...listOption(source, "any-of-issue-labels")];
-    // `actions/stale` covers pull requests unless told otherwise, and nuxi never handles those.
+    // `actions/stale` covers pull requests unless told otherwise, and tia never handles those.
     // `days-before-stale: -1` turns both off when no pull request specific value overrides it.
     const pullRequestsOff =
       /days-before-pr-stale:\s*-1/.test(source) ||
@@ -120,20 +120,20 @@ export function inspectWorkflow(path: string, sha: string, source: string, intak
       (/days-before-stale:\s*-1/.test(source) && !/days-before-pr-stale:/.test(source));
     const handlesPullRequests = !pullRequestsOff;
     if (!handlesPullRequests && targets.length > 0 && targets.every((label) => owned.has(label))) {
-      return { path, sha, action: "remove", reason: `Closes issues labeled ${targets.map((label) => `\`${label}\``).join(", ")} after a delay. nuxi follows up and mentions a maintainer instead, and never closes.` };
+      return { path, sha, action: "remove", reason: `Closes issues labeled ${targets.map((label) => `\`${label}\``).join(", ")} after a delay. tia follows up and mentions a maintainer instead, and never closes.` };
     }
     return {
       path,
       sha,
       action: "keep",
-      reason: `Uses \`actions/stale\` ${handlesPullRequests ? "on pull requests or on every issue" : "on labels nuxi does not manage"}, so it stays. Add \`exempt-issue-labels: '${EXEMPT_LABELS.join(",")}'\` so it never closes an issue that waits on a maintainer.`,
+      reason: `Uses \`actions/stale\` ${handlesPullRequests ? "on pull requests or on every issue" : "on labels tia does not manage"}, so it stays. Add \`exempt-issue-labels: '${EXEMPT_LABELS.join(",")}'\` so it never closes an issue that waits on a maintainer.`,
     };
   }
 
   return null;
 }
 
-/** Reads the repository and drafts its `.github/nuxi.yml`. Writes nothing. */
+/** Reads the repository and drafts its `.github/tia.yml`. Writes nothing. */
 export async function proposeSetup(ref: RepoRef, signal?: AbortSignal): Promise<SetupProposal> {
   const options = { owner: ref.owner, signal };
   const repo = await gh(repoSchema, repoPath(ref), options);
@@ -194,7 +194,7 @@ export async function proposeSetup(ref: RepoRef, signal?: AbortSignal): Promise<
   const formPaths = [...paths].filter((path) => /^\.github\/ISSUE_TEMPLATE\/[^/]+\.ya?ml$/.test(path) && !path.endsWith("/config.yml"));
   const forms = await Promise.all(formPaths.map(async (path) => (await ghText(`${repoPath(ref)}/contents/${path}`, options)) ?? ""));
   const intakeLabels = intakeLabelsFromForms(forms);
-  if (!formPaths.length) notes.push("No issue form was found. nuxi reads the reproduction guide and starter links from the form's reproduction field. Without one, set `reproduction` in this file.");
+  if (!formPaths.length) notes.push("No issue form was found. tia reads the reproduction guide and starter links from the form's reproduction field. Without one, set `reproduction` in this file.");
 
   const securityPath = ["SECURITY.md", ".github/SECURITY.md", "docs/SECURITY.md"].find((path) => paths.has(path));
   if (securityPath) config.securityPolicy = `https://github.com/${ref.owner}/${ref.repo}/blob/${repo.default_branch}/${securityPath}`;
@@ -212,10 +212,10 @@ export async function proposeSetup(ref: RepoRef, signal?: AbortSignal): Promise<
   }
   // The reproduire template is dead weight once its workflow goes.
   if (reproduireTemplate && workflows.some((finding) => finding.action === "remove" && finding.reason.startsWith("Posts the reproduction"))) {
-    workflows.push({ path: reproduireTemplate, sha: blobs.get(reproduireTemplate) ?? "", action: "remove", reason: "Only used by the reproduire workflow. The request now comes from `reproduction` in `.github/nuxi.yml`." });
+    workflows.push({ path: reproduireTemplate, sha: blobs.get(reproduireTemplate) ?? "", action: "remove", reason: "Only used by the reproduire workflow. The request now comes from `reproduction` in `.github/tia.yml`." });
   }
 
-  const yaml = `# nuxi triage config. Reference: https://github.com/benjamincanac/nuxi#configuration\n${stringify(config, { lineWidth: 0 })}`;
+  const yaml = `# tia triage config. Reference: https://github.com/benjamincanac/tia#configuration\n${stringify(config, { lineWidth: 0 })}`;
   const check = parseRepoConfig(yaml);
   if (!check.ok) throw new Error(`Generated config is invalid:\n${check.error}`);
 
@@ -226,19 +226,19 @@ export function setupPullRequestBody(proposal: SetupProposal, manual: WorkflowFi
   const removed = proposal.workflows.filter((finding) => finding.action === "remove" && !manual.includes(finding));
   const kept = proposal.workflows.filter((finding) => finding.action === "keep");
   const lines = [
-    "This adds the [nuxi](https://github.com/benjamincanac/nuxi) triage config for this repository. Everything in it was detected from the repository, review it like any other config file.",
+    "This adds the [tia](https://github.com/benjamincanac/tia) triage config for this repository. Everything in it was detected from the repository, review it like any other config file.",
     "",
-    "`dryRun: true` means nuxi logs what it would do and writes nothing. Set it to `false` when the decisions look right. It never closes, transfers or converts an issue, and never removes a label a human applied.",
+    "`dryRun: true` means tia logs what it would do and writes nothing. Set it to `false` when the decisions look right. It never closes, transfers or converts an issue, and never removes a label a human applied.",
   ];
   if (proposal.notes.length) lines.push("", "### To check", "", ...proposal.notes.map((note) => `- ${note}`));
   if (removed.length) {
-    lines.push("", "### Removed automation", "", "These overlap with what nuxi does. They are removed in the same PR, so merge it when you are ready to switch `dryRun` off, or drop the deletions from this branch to keep them for now.", "", "| File | Why |", "| --- | --- |", ...removed.map((finding) => `| \`${finding.path}\` | ${finding.reason} |`));
+    lines.push("", "### Removed automation", "", "These overlap with what tia does. They are removed in the same PR, so merge it when you are ready to switch `dryRun` off, or drop the deletions from this branch to keep them for now.", "", "| File | Why |", "| --- | --- |", ...removed.map((finding) => `| \`${finding.path}\` | ${finding.reason} |`));
   }
   if (manual.length) {
     lines.push("", "### To remove by hand", "", "The app has no permission to edit workflow files here, so these were left in place.", "", "| File | Why |", "| --- | --- |", ...manual.map((finding) => `| \`${finding.path}\` | ${finding.reason} |`));
   }
   if (kept.length) lines.push("", "### Kept", "", "| File | Note |", "| --- | --- |", ...kept.map((finding) => `| \`${finding.path}\` | ${finding.reason} |`));
-  lines.push("", "There is no label to create. nuxi creates each of its labels the first time it applies it.");
+  lines.push("", "There is no label to create. tia creates each of its labels the first time it applies it.");
   return lines.join("\n");
 }
 
@@ -250,7 +250,7 @@ export type SetupResult =
   | { status: "configured" | "skipped"; reason: string };
 
 /**
- * Opens one pull request with the config and the workflow removals, from the `nuxi/setup` branch.
+ * Opens one pull request with the config and the workflow removals, from the `tia/setup` branch.
  * Idempotent: a repo that has the file, or an open setup PR, is left alone. Never touches the default branch.
  */
 export async function openSetupPullRequest(ref: RepoRef, signal?: AbortSignal): Promise<SetupResult> {
@@ -283,7 +283,7 @@ export async function openSetupPullRequest(ref: RepoRef, signal?: AbortSignal): 
     ...options,
     method: "PUT",
     body: {
-      message: "chore(github): add nuxi triage config",
+      message: "chore(github): add tia triage config",
       branch: SETUP_BRANCH,
       content: Buffer.from(proposal.yaml).toString("base64"),
       ...(leftover ? { sha: leftover.sha } : {}),
@@ -311,7 +311,7 @@ export async function openSetupPullRequest(ref: RepoRef, signal?: AbortSignal): 
     ...options,
     method: "POST",
     // The pull request does more than add the file, so it is not the commit's subject.
-    body: { title: "chore(github): set up nuxi triage", head: SETUP_BRANCH, base: proposal.defaultBranch, body: setupPullRequestBody(proposal, manual) },
+    body: { title: "chore(github): set up tia triage", head: SETUP_BRANCH, base: proposal.defaultBranch, body: setupPullRequestBody(proposal, manual) },
   });
 
   return {

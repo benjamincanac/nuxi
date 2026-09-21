@@ -6,8 +6,8 @@ import { githubConnector, isProduction } from "../config";
 import { isBot, loadRepoConfig, noteInstallation } from "../lib/github";
 import { enqueue, type QueueItem } from "../lib/store";
 
-// The GitHub App slug. `@nuxi` belongs to a GitHub user, so mentioning it would ping a stranger.
-const BOT_NAME = "nuxiai";
+// The GitHub App slug. `@tia` belongs to a GitHub user, so mentioning it would ping a stranger.
+const BOT_NAME = "tia-agent";
 const MENTION = new RegExp(`(^|\\s)@${BOT_NAME}\\b`, "i");
 
 const issueLabels = z.object({
@@ -30,7 +30,7 @@ async function queue(ctx: GitHubInboundContext, item: Omit<QueueItem, "owner" | 
 }
 
 /**
- * Every hook starts here, before it decides whether the event is one it acts on. An account nuxi
+ * Every hook starts here, before it decides whether the event is one it acts on. An account tia
  * has never minted a token for is learned from the first webhook of any kind, which is the only
  * step installing the app on a new account takes.
  */
@@ -84,18 +84,18 @@ export default githubChannel({
     // The default posts the approval prompt as a public comment. Runs that need an approval are
     // dispatched to Discord, so reaching this means a misconfiguration. Stay silent.
     "input.requested"(event, channel) {
-      console.warn(`[nuxi] input requested on ${channel.repository.fullName}, ignored`, JSON.stringify(event.requests.map((request) => request.kind)));
+      console.warn(`[tia] input requested on ${channel.repository.fullName}, ignored`, JSON.stringify(event.requests.map((request) => request.kind)));
     },
     "message.completed"(event, channel) {
       if (event.finishReason !== "tool-calls" && event.message) {
-        console.log(`[nuxi] ${channel.repository.fullName}#${channel.conversation.issueNumber ?? channel.conversation.pullRequestNumber}: ${event.message}`);
+        console.log(`[tia] ${channel.repository.fullName}#${channel.conversation.issueNumber ?? channel.conversation.pullRequestNumber}: ${event.message}`);
       }
     },
     "turn.failed"(event, channel) {
-      console.error(`[nuxi] turn failed on ${channel.repository.fullName}`, event);
+      console.error(`[tia] turn failed on ${channel.repository.fullName}`, event);
     },
     "session.failed"(event, channel) {
-      console.error(`[nuxi] session failed on ${channel.repository.fullName}`, event);
+      console.error(`[tia] session failed on ${channel.repository.fullName}`, event);
     },
   },
 });

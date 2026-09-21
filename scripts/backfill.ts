@@ -22,7 +22,7 @@ import { runPipeline } from "../agent/lib/pipeline";
 function token(): string {
   return process.env.GITHUB_TOKEN ?? execFileSync("gh", ["auth", "token"], { encoding: "utf8" }).trim();
 }
-process.env.NUXI_SCRIPT_TOKEN ??= token();
+process.env.TIA_SCRIPT_TOKEN ??= token();
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -111,7 +111,7 @@ async function local(): Promise<Row[]> {
   } else {
     config = await loadRepoConfig({ owner, repo });
   }
-  if (!config) throw new Error(`${slug} has no valid .github/nuxi.yml. Pass --config to use a local file.`);
+  if (!config) throw new Error(`${slug} has no valid .github/tia.yml. Pass --config to use a local file.`);
   config = { ...config, dryRun: true };
 
   const issues = (await listOpenIssues(config)).slice(0, limit);

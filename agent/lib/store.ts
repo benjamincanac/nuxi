@@ -155,10 +155,10 @@ function kv(): KeyValue {
   return instance;
 }
 
-const DECISIONS_KEY = "nuxi:decisions";
-const UPSTREAM_KEY = "nuxi:upstream";
-const INSTALLATIONS_KEY = "nuxi:installations";
-const QUEUE_KEY = "nuxi:queue";
+const DECISIONS_KEY = "tia:decisions";
+const UPSTREAM_KEY = "tia:upstream";
+const INSTALLATIONS_KEY = "tia:installations";
+const QUEUE_KEY = "tia:queue";
 const MAX_DECISIONS = 5_000;
 const WEEK_SECONDS = 7 * 24 * 60 * 60;
 // Per issue markers outlive any run, not the issue: a year after the last write they are dead weight.
@@ -171,7 +171,7 @@ function issueKey(ref: IssueRef): string {
 export async function recordDecision(record: DecisionRecord): Promise<void> {
   await kv().rpush(DECISIONS_KEY, record);
   await kv().ltrim(DECISIONS_KEY, -MAX_DECISIONS, -1);
-  const path = process.env.NUXI_DECISIONS_JSONL;
+  const path = process.env.TIA_DECISIONS_JSONL;
   if (path) {
     await mkdir(dirname(path), { recursive: true });
     await appendFile(path, `${JSON.stringify(record)}\n`);
@@ -188,21 +188,21 @@ export function listDecisions(): Promise<DecisionRecord[]> {
  * `dispatch` clears the key before each run, which is what keeps one plan per run.
  */
 export function getPlan(ref: IssueRef): Promise<TriagePlan | null> {
-  return kv().get<TriagePlan>(`nuxi:plan:${issueKey(ref)}`);
+  return kv().get<TriagePlan>(`tia:plan:${issueKey(ref)}`);
 }
 
 export async function savePlan(runId: string, plan: TriagePlan): Promise<void> {
-  await kv().set(`nuxi:plan:${issueKey(plan.issue)}`, plan, WEEK_SECONDS);
-  await kv().set(`nuxi:run:${runId}`, true, WEEK_SECONDS);
+  await kv().set(`tia:plan:${issueKey(plan.issue)}`, plan, WEEK_SECONDS);
+  await kv().set(`tia:run:${runId}`, true, WEEK_SECONDS);
 }
 
 export async function clearPlan(ref: IssueRef): Promise<void> {
-  await kv().del(`nuxi:plan:${issueKey(ref)}`);
+  await kv().del(`tia:plan:${issueKey(ref)}`);
 }
 
 /** Whether this run is a triage run, meaning a tool has already recorded a plan for it. */
 export async function isTriageRun(runId: string): Promise<boolean> {
-  return (await kv().get<boolean>(`nuxi:run:${runId}`)) === true;
+  return (await kv().get<boolean>(`tia:run:${runId}`)) === true;
 }
 
 /**
@@ -229,7 +229,7 @@ export async function listUpstreamPairs(): Promise<UpstreamPair[]> {
 
 /** Follow-ups and mentions are sent once. The marker is the memory of having sent them. */
 export async function markOnce(ref: IssueRef, marker: string): Promise<boolean> {
-  const key = `nuxi:once:${issueKey(ref)}:${marker}`;
+  const key = `tia:once:${issueKey(ref)}:${marker}`;
   if (await kv().get<number>(key)) return false;
   await kv().set(key, Date.now(), YEAR_SECONDS);
   return true;
@@ -237,31 +237,31 @@ export async function markOnce(ref: IssueRef, marker: string): Promise<boolean> 
 
 /** Set by the ops trigger so an explicit run on a preview deployment may write for one hour. */
 export function allowPreviewWrite(ref: IssueRef): Promise<void> {
-  return kv().set(`nuxi:explicit:${issueKey(ref)}`, Date.now(), 60 * 60);
+  return kv().set(`tia:explicit:${issueKey(ref)}`, Date.now(), 60 * 60);
 }
 
 export async function isPreviewWriteAllowed(ref: IssueRef): Promise<boolean> {
-  return (await kv().get<number>(`nuxi:explicit:${issueKey(ref)}`)) !== null;
+  return (await kv().get<number>(`tia:explicit:${issueKey(ref)}`)) !== null;
 }
 
 /** Fingerprint of the last comment posted on an issue, so a re-evaluation never repeats itself. */
 export function getLastAnnounced(ref: IssueRef): Promise<string | null> {
-  return kv().get<string>(`nuxi:announced:${issueKey(ref)}`);
+  return kv().get<string>(`tia:announced:${issueKey(ref)}`);
 }
 
 export function setLastAnnounced(ref: IssueRef, fingerprint: string): Promise<void> {
-  return kv().set(`nuxi:announced:${issueKey(ref)}`, fingerprint, YEAR_SECONDS);
+  return kv().set(`tia:announced:${issueKey(ref)}`, fingerprint, YEAR_SECONDS);
 }
 
 /** Backfills run the real pipeline on a repo that may have `dryRun: false`. They must not write. */
 // Set when the run is dispatched and keyed by issue, since the run id is not known yet. The window is
 // kept short: a real event on the same issue within it also runs dry, and the daily sweep catches up.
 export function forceDryRun(ref: IssueRef): Promise<void> {
-  return kv().set(`nuxi:dry:${issueKey(ref)}`, Date.now(), 20 * 60);
+  return kv().set(`tia:dry:${issueKey(ref)}`, Date.now(), 20 * 60);
 }
 
 export async function isDryRunForced(ref: IssueRef): Promise<boolean> {
-  return (await kv().get<number>(`nuxi:dry:${issueKey(ref)}`)) !== null;
+  return (await kv().get<number>(`tia:dry:${issueKey(ref)}`)) !== null;
 }
 
 /**
@@ -275,16 +275,16 @@ export interface Classified {
 }
 
 export function rememberClassified(ref: IssueRef, classified: Classified): Promise<void> {
-  return kv().set(`nuxi:classified:${issueKey(ref)}`, classified, YEAR_SECONDS);
+  return kv().set(`tia:classified:${issueKey(ref)}`, classified, YEAR_SECONDS);
 }
 
 export function getClassified(ref: IssueRef): Promise<Classified | null> {
-  return kv().get<Classified>(`nuxi:classified:${issueKey(ref)}`);
+  return kv().get<Classified>(`tia:classified:${issueKey(ref)}`);
 }
 
 /** Skips the daily re-evaluation when the issue did not change and crossed no follow-up threshold. */
 export async function alreadyEvaluated(ref: IssueRef, fingerprint: string): Promise<boolean> {
-  const key = `nuxi:evaluated:${issueKey(ref)}`;
+  const key = `tia:evaluated:${issueKey(ref)}`;
   if ((await kv().get<string>(key)) === fingerprint) return true;
   await kv().set(key, fingerprint, YEAR_SECONDS);
   return false;
@@ -309,18 +309,18 @@ export async function drainQueue(limit: number): Promise<QueueItem[]> {
 
 // Prefixed: Upstash parses stored values as JSON, and a tag such as `2024` would come back as a number.
 export async function getLastSeenRelease(repo: string): Promise<string | null> {
-  const stored = await kv().get<string>(`nuxi:release:${repo.toLowerCase()}`);
+  const stored = await kv().get<string>(`tia:release:${repo.toLowerCase()}`);
   return typeof stored === "string" ? stored.replace(/^tag:/, "") : null;
 }
 
 export function setLastSeenRelease(repo: string, tag: string): Promise<void> {
-  return kv().set(`nuxi:release:${repo.toLowerCase()}`, `tag:${tag}`);
+  return kv().set(`tia:release:${repo.toLowerCase()}`, `tag:${tag}`);
 }
 
 export function saveBackfillRow(runId: string, row: unknown): Promise<void> {
-  return kv().rpush(`nuxi:backfill:${runId}`, row);
+  return kv().rpush(`tia:backfill:${runId}`, row);
 }
 
 export function listBackfillRows<T>(runId: string): Promise<T[]> {
-  return kv().lrange<T>(`nuxi:backfill:${runId}`, 0, -1);
+  return kv().lrange<T>(`tia:backfill:${runId}`, 0, -1);
 }

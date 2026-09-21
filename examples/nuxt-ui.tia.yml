@@ -1,10 +1,6 @@
-# .github/nuxi.yml for the playground repo
-dryRun: false
+# .github/tia.yml for nuxt/ui
+dryRun: true
 maintainers: [benjamincanac]
-# Seeded issues are created by your own account. Without this they would all be skipped.
-triageMaintainerIssues: true
-# The playground has no code. Areas, releases and the next major branch are read from the real repository.
-source: nuxt/ui
 areas:
   - kind: component
     glob: src/runtime/components/*.vue

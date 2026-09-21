@@ -6,7 +6,7 @@ import { openSetupPullRequest, proposeSetup } from "../lib/setup";
 
 export default defineTool({
   description:
-    "Sets up a repository that has no .github/nuxi.yml yet. Opens one pull request from the nuxi/setup branch with a config detected from the repository, and removes the workflows nuxi replaces. Only on a maintainer's explicit request. With preview true it returns the proposal and writes nothing.",
+    "Sets up a repository that has no .github/tia.yml yet. Opens one pull request from the tia/setup branch with a config detected from the repository, and removes the workflows tia replaces. Only on a maintainer's explicit request. With preview true it returns the proposal and writes nothing.",
   inputSchema: z.object({
     owner: z.string().min(1),
     repo: z.string().min(1),
