@@ -15,6 +15,7 @@ nuxi runs today as one person's deployment: the GitHub App, the Vercel project a
 | Their own approvals and digest | `discord.approvalsChannel` and `discord.digestChannel` in their repository's config. |
 | Who can approve | Whoever can see that channel. |
 | Their own thresholds | `thresholds` in their repository's config. |
+| No sandbox | Leave `sandbox` out of `decisions` in their repository's config. |
 
 A maintainer who owns a repository under an allowed account can therefore adopt nuxi without asking anyone, which is the property to preserve.
 
@@ -24,7 +25,7 @@ A maintainer who owns a repository under an allowed account can therefore adopt 
 
 Transfer the GitHub App to the organization, and the Vercel project with it. Today an install on a repository someone else owns needs an owner of that account to approve a request from a personal app, and every run bills a personal account. An organization owned app is installed by the people who already administer the repositories, and the bill lands where the usage does.
 
-The connector holds the app's private key, so the transfer is a Connect operation, not a code change. `GITHUB_CONNECTOR` already points at a UID, so a new connector is a variable away.
+The connector holds the app's private key, so the transfer is a Connect operation, not a code change. `GITHUB_CONNECTOR` already overrides the connector nuxi uses, so a new one is a variable away.
 
 Keep `NUXI_ALLOWED_OWNERS` set to the organization even then. A public app can be installed by anyone, and the allow-list is what keeps a stranger's installation from reaching the maintainers' Discord.
 
@@ -53,7 +54,7 @@ The cheapest fix is `/ask`: the backlog conversation already runs per repository
 
 Two things cost real money per issue: the Jev calls in `classify_issue`, and the Vercel Sandbox in `run_sandbox_repro`. The sandbox is the expensive one, and it runs in dry-run too, twice per issue on a repository that configures `nextMajor.package`.
 
-Before this is open to every repository in an organization, the sandbox needs a budget per repository and a way to turn it off, and the digest should report what the week cost. A team that adopts nuxi should be able to see its own bill.
+Before this is open to every repository in an organization, the sandbox needs a budget per repository, and the digest should report what the week cost. A team that adopts nuxi should be able to see its own bill. Turning the sandbox off already works through `decisions`, but it is all or nothing.
 
 ### Rollout order
 
@@ -64,3 +65,27 @@ Before this is open to every repository in an organization, the sandbox needs a 
 5. Add the sandbox budget, then say yes to anyone who asks.
 
 Steps 1 and 2 need no code. Everything after them is the work.
+
+## Retiring the playground
+
+The playground is a test bench, not a part of nuxi. It is the only repository where a run can go from the webhook to a Discord approval to a real write without touching a real backlog, and that is what makes an eve upgrade safe to check. eve still ships breaking minors every few days, so it stays for now.
+
+It can go once two things are true: eve upgrades stop breaking the agent, and `nuxt/ui` runs with `dryRun: false`, which puts the same chain under real traffic.
+
+### What goes with it
+
+| What | Where |
+| --- | --- |
+| The `pnpm seed` row | [`README.md`](README.md) |
+| The seed script and its `seed` entry | [`scripts/seed-playground.ts`](scripts/seed-playground.ts), `package.json` |
+| The playground config | [`examples/playground.nuxi.yml`](examples/playground.nuxi.yml) |
+| Step 4, and the playground wording in steps 5, 7 and 9 | [`SETUP.md`](SETUP.md) |
+| The production app's installation on the playground | GitHub |
+
+Two config keys are worth a second look at that point. `source` reads areas, releases and the next major branch from another repository, and the playground is the only config that needs it. If nothing else does, the key goes. `triageMaintainerIssues` was added for seeded issues, but a real repository may still want it, so it probably stays.
+
+### What stays
+
+The preview GitHub App. It is what keeps previews and local runs away from the production token, and that is enforced by GitHub rather than by a guard in the code. It needs one repository to be installed on, which can be any test repository and does not need to be documented.
+
+An opt-out of the weekly digest, `discord.digestChannel: false`, was only ever wanted for the playground. It is not worth a schema change if the playground is going away.
