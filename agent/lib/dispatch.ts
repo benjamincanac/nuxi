@@ -46,7 +46,7 @@ export function triagePrompt(item: QueueItem, config: RepoConfig, triageRequeste
         : `You were @-mentioned on ${target(item)} with something that is not a triage request. Do not read or answer the question. Call apply_triage (${ref}) with one sentence saying you only triage issues${config.help ? ` and pointing to ${config.help}` : ""}, and do nothing else.`;
     case "sweep":
     case "release":
-      return `Scheduled ${item.reason} pass on ${target(item)}. Start with sweep_issue (${ref}). ${tail}`;
+      return `Scheduled ${item.reason} pass on ${target(item)}. Start with sweep_issue (${ref}${item.reason === "release" ? ", release true" : ""}). ${tail}`;
     case "upstream_closed":
       return `The upstream issue tracked for ${target(item)} was closed. Call mention_maintainers (${ref}) with template upstream_closed and detail "${clip(item.text ?? "", 200)}", then apply_triage with an empty comment. ${tail}`;
     default:

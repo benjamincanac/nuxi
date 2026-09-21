@@ -79,7 +79,7 @@ The kind of issue is read from the forms too. Each form says how the repository 
 | | When | What |
 | --- | --- | --- |
 | `dispatch_queue` | every minute | Starts up to 5 queued sessions |
-| `daily_sweep` | 03:00 UTC | Re-evaluates waiting issues, follows up on `needs reproduction` at 14 days and mentions maintainers at 30, picks up releases, closed upstream issues and new installs |
+| `daily_sweep` | 03:00 UTC | Re-evaluates waiting issues, follows up on `needs reproduction` at 14 days and mentions maintainers at 30, re-checks open reports for a fix when a release is published, picks up closed upstream issues and new installs |
 | `weekly_digest` | Monday 09:00 Paris | One Discord message per repository |
 
 `POST /ops/<triage|sweep|backfill|digest|setup|check>/trigger` and `GET /ops/decisions` are protected by `INTERNAL_API_SECRET`. A preview deployment never writes unless the request carries `"write": true` and approvals are off for Preview with `NUXI_REQUIRE_APPROVAL=false`.

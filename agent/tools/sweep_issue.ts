@@ -1,4 +1,5 @@
 import { defineTool } from "eve/tools";
+import { z } from "zod";
 
 import { isEnabled } from "../config";
 import { staleQuestions } from "../lib/jev/questions";
@@ -7,6 +8,7 @@ import { ask, clip } from "../lib/jev";
 import { updatePlan, type PlanPatch } from "../lib/plan";
 import { issueState } from "../lib/steps/classify";
 import { markOnce, recordDecision } from "../lib/store";
+import { releaseCheckApplies } from "../lib/sweep";
 import { issueInput, requireContext, runId } from "../lib/tool";
 
 const DAY_MS = 24 * 60 * 60_000;
@@ -17,10 +19,12 @@ function daysSince(date: string | undefined): number {
 
 export default defineTool({
   description:
-    "Daily sweep step for one issue. Applies the time based rules: follow up once on `needs reproduction`, mention maintainers when it stays idle, mention them when a `needs verification` issue gets no confirmation, and ask Jev whether a long idle issue that was never triaged is still relevant. Returns the tools to call next.",
-  inputSchema: issueInput,
+    "Daily sweep step for one issue. Applies the time based rules: follow up once on `needs reproduction`, mention maintainers when it stays idle, mention them when a `needs verification` issue gets no confirmation, and ask Jev whether a long idle issue that was never triaged is still relevant. On a release pass it only re-checks whether the issue is fixed. Returns the tools to call next.",
+  inputSchema: issueInput.extend({
+    release: z.boolean().default(false).describe("True on a release pass, which re-checks the fix and nothing else."),
+  }),
   label: { start: ({ owner, repo, issueNumber }) => `Sweep ${owner}/${repo}#${issueNumber}` },
-  async execute(ref, ctx) {
+  async execute({ release, ...ref }, ctx) {
     const context = await requireContext(ref, ctx.abortSignal);
     const { config, issue } = context;
     const { followUpDays, mentionDays, staleDays } = config.sweep;
@@ -37,7 +41,11 @@ export default defineTool({
     let next: string[] = [];
     let answers: unknown = null;
 
-    if (issue.labels.includes("needs reproduction")) {
+    // A release changes whether the issue is fixed, nothing about its kind or the part it touches,
+    // so it re-checks that alone. Anything else on the issue is a `sweep` and takes the branches below.
+    if (release) {
+      if (releaseCheckApplies(config, issue, context.kinds)) next = ["check_fixed_in_release"];
+    } else if (issue.labels.includes("needs reproduction")) {
       const since = labeledAt("needs reproduction");
       const age = daysSince(since);
       if (reporterReplied(since)) next = ["classify_issue"];

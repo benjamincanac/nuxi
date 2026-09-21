@@ -1,6 +1,6 @@
-import type { RepoConfig } from "../config";
+import { isEnabled, type RepoConfig } from "../config";
 import { listOpenIssues, listReleases, type Issue } from "./github";
-import { loadIntakeLabels } from "./issue-forms";
+import { kindOf, loadIntakeLabels, loadIssueKinds, type IssueKind } from "./issue-forms";
 import { closedUpstreamPairs } from "./steps/upstream";
 import { alreadyEvaluated, enqueue, getLastSeenRelease, setLastSeenRelease, trackUpstreamPair, type QueueItem } from "./store";
 
@@ -10,6 +10,16 @@ const SWEEP_LABELS = ["needs reproduction", "needs verification"];
 
 /** Sessions started per minute by `schedules/dispatch_queue`. */
 export const DISPATCH_BATCH = 5;
+
+/**
+ * A release re-opens one question and one only: is this fixed. It is worth asking about an open
+ * report of the repository's own, and not about an issue that already waits on someone.
+ */
+export function releaseCheckApplies(config: RepoConfig, issue: Pick<Issue, "labels" | "type">, kinds: readonly IssueKind[]): boolean {
+  if (!isEnabled(config, "fixed")) return false;
+  if (issue.labels.includes("needs reproduction") || issue.labels.includes("needs verification")) return false;
+  return kindOf(issue, kinds)?.report === true;
+}
 
 function thresholdsCrossed(issue: Issue, config: RepoConfig): number {
   const idleDays = (Date.now() - Date.parse(issue.updatedAt)) / DAY_MS;
@@ -26,12 +36,13 @@ export interface SweepSummary {
 }
 
 /**
- * Queues every issue with an intake label, `needs reproduction` or `needs verification` that changed,
- * crossed a follow-up threshold, or may be affected by a release published since the last sweep.
+ * Queues every issue with an intake label, `needs reproduction` or `needs verification` that changed
+ * or crossed a follow-up threshold, as a `sweep`. An issue that did neither but may be affected by a
+ * release published since the last sweep is queued as a `release`, which only re-checks the fix.
  */
 export async function sweepRepo(config: RepoConfig, options: { force?: boolean; limit?: number; explicit?: boolean; stagger?: boolean } = {}): Promise<SweepSummary> {
   const repo = `${config.owner}/${config.repo}`;
-  const intakeLabels = await loadIntakeLabels(config);
+  const [intakeLabels, kinds] = await Promise.all([loadIntakeLabels(config), loadIssueKinds(config)]);
   const [issues, releases, lastSeen] = await Promise.all([
     listOpenIssues(config, [...intakeLabels, ...SWEEP_LABELS]),
     listReleases(config),
@@ -45,14 +56,18 @@ export async function sweepRepo(config: RepoConfig, options: { force?: boolean; 
   let queued = 0;
   let unchanged = 0;
   for (const issue of issues.slice(0, options.limit ?? issues.length)) {
-    const fingerprint = `${issue.updatedAt}:${latest ?? ""}:${thresholdsCrossed(issue, config)}`;
-    if (!options.force && (await alreadyEvaluated(issue, fingerprint))) {
+    // The release is deliberately not part of the fingerprint. It changes whether the issue is
+    // fixed, nothing about the issue itself, so a publish must not re-triage the whole backlog.
+    const fingerprint = `${issue.updatedAt}:${thresholdsCrossed(issue, config)}`;
+    const changed = options.force === true || !(await alreadyEvaluated(issue, fingerprint));
+    // An unchanged issue is only worth a session when the release could have fixed it.
+    if (!changed && !(newRelease && releaseCheckApplies(config, issue, kinds))) {
       unchanged++;
       continue;
     }
     // Spread over time so the queue starts a few sessions per minute.
     const delay = options.stagger === false ? 0 : Math.floor(queued / DISPATCH_BATCH) * 60_000;
-    await enqueue({ ...base, issueNumber: issue.issueNumber, reason: newRelease ? "release" : "sweep", notBefore: Date.now() + delay });
+    await enqueue({ ...base, issueNumber: issue.issueNumber, reason: changed ? "sweep" : "release", notBefore: Date.now() + delay });
     queued++;
   }
 
