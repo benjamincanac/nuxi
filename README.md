@@ -56,7 +56,9 @@ There is no install webhook, so the daily sweep opens it. `POST /ops/setup/trigg
 
 ## Labels
 
-Nothing to set up. nuxi creates a label the first time it applies it and never edits an existing one. It can apply `duplicate`, `answered`, `question`, `needs verification`, `needs reproduction`, `has pr`, `a11y`, `stale`, the next major label and `upstream/<repo>`. It only removes the labels that every issue form of the repository applies, such as `triage`. A repository without such a label has nothing to remove.
+Nothing to set up. nuxi creates a label the first time it applies it and never edits an existing one. It can apply `duplicate`, `answered`, `question`, `needs verification`, `needs reproduction`, `has pr`, `a11y`, `stale`, the next major label and `upstream/<repo>`. It only removes the labels that several issue forms of the repository apply, such as `triage`. A repository without such a label has nothing to remove.
+
+The kind of issue is read from the forms too. Each form says how the repository marks it, with an Issue Type, with labels such as `bug`, or with both, and nuxi marks an unmarked issue the same way. The form with a reproduction field is the one that gets the reproduction and fixed checks. A repository without forms gets neither type nor label.
 
 ## Sandbox
 

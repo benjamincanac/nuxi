@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { isProduction, type RepoConfig } from "../config";
 import { addComment, addLabels, ensureLabel, removeLabel, setIssueType } from "./github";
-import type { ReproductionSettings } from "./issue-forms";
+import type { IssueKind, ReproductionSettings } from "./issue-forms";
 import { labelStyle } from "./labels";
 import { MENTION_TEMPLATES, type TriagePlan } from "./plan";
 import { getLastAnnounced, isPreviewWriteAllowed, recordDecision, setLastAnnounced } from "./store";
@@ -87,8 +87,11 @@ export async function applyPlan(
   currentLabels: readonly string[],
   reproduction: ReproductionSettings,
   intakeLabels: readonly string[],
+  kinds: readonly IssueKind[],
 ): Promise<AppliedActions> {
-  const addedLabels = plan.addLabels.filter((label) => isAllowedLabel(config, label) && !currentLabels.includes(label));
+  // Labels of a kind are the repository's own, from its issue forms. Everything else has to be one of the bot's.
+  const allowed = (label: string) => isAllowedLabel(config, label) || kinds.some((kind) => kind.labels.includes(label));
+  const addedLabels = plan.addLabels.filter((label) => allowed(label) && !currentLabels.includes(label));
   const removable = plan.removeLabels.filter((label) => currentLabels.includes(label));
   // Intake labels come from the issue forms, so they count as applied by the reporter. They are the only ones of those the bot removes.
   const removedLabels = removable.filter((label) => intakeLabels.includes(label) || !humanLabels.has(label));

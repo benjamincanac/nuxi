@@ -3,8 +3,10 @@ import {
   classifyQuestions,
   areaQuestionId,
   areaQuestions,
+  kindQuestion,
   upstreamQuestion,
 } from "../jev/questions";
+import { kindOf } from "../issue-forms";
 import type { TriageContext } from "../context";
 import { ask, choiceConfidence, clipBody, clipComments } from "../jev";
 import type { PlanPatch, SandboxResult } from "../plan";
@@ -47,6 +49,7 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
   const answers = await ask(
     {
       ...classifyQuestions,
+      type: kindQuestion(context.kinds),
       upstream: upstreamQuestion(config.upstreams),
       ...areaQuestions(areas),
     },
@@ -54,8 +57,10 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
     signal,
   );
 
-  // Below the threshold the type is unknown, and the Bug only steps do not run on a guess.
-  const type = issue.type ?? (choiceConfidence(answers.type) >= t.labels ? answers.type.choice : null);
+  // What the issue already carries wins. Below the threshold the kind is unknown, and the steps for reports do not run on a guess.
+  const chosen = choiceConfidence(answers.type) >= t.labels ? context.kinds.find((candidate) => candidate.name === answers.type.choice) : null;
+  const kind = kindOf(issue, context.kinds) ?? chosen ?? null;
+  const type = kind?.type ?? kind?.name ?? issue.type;
   const patch: PlanPatch = { addLabels: [], removeLabels: [], facts: [], mentions: [] };
   const labels = patch.addLabels ?? [];
   const facts = patch.facts ?? [];
@@ -84,7 +89,11 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
     return { answers, type, next: [], patch: { escalate: true } };
   }
 
-  if (isEnabled(config, "type") && !issue.type && type) patch.setType = type;
+  // The kind is marked the way the repository's form marks it: an Issue Type, labels, or both.
+  if (isEnabled(config, "type") && kind) {
+    if (!issue.type && kind.type) patch.setType = kind.type;
+    labels.push(...kind.labels);
+  }
 
   // A decision already on the issue is not announced twice: re-evaluations stay silent about it.
   const has = (label: string) => issue.labels.includes(label);
@@ -119,7 +128,7 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
     // Asking for a reproduction ends the run. "Please reproduce" next to "this is fixed" or
     // "this is a duplicate" in the same comment would contradict itself.
     let waitsForReproduction = false;
-    if (!resolved && type === "Bug" && isEnabled(config, "reproduction")) {
+    if (!resolved && kind?.report && isEnabled(config, "reproduction")) {
       if (answers.has_reproduction.probability < t.has_reproduction) {
         waitsForReproduction = true;
         if (!has("needs reproduction")) {
@@ -133,7 +142,7 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
       }
     }
 
-    if (!resolved && !waitsForReproduction && isEnabled(config, "fixed") && type === "Bug" && !has("needs verification")) {
+    if (!resolved && !waitsForReproduction && isEnabled(config, "fixed") && kind?.report && !has("needs verification")) {
       next.push("check_fixed_in_release");
     }
     // Still checked without a reproduction: a confident duplicate replaces the request, see `supersedesReproduction`.

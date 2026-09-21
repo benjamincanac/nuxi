@@ -14,7 +14,7 @@ import {
   type Issue,
   type IssueRef,
 } from "./github";
-import { loadIntakeLabels, loadReproductionSettings, reproductionFromConfig, type ReproductionSettings } from "./issue-forms";
+import { DEFAULT_KINDS, loadIntakeLabels, loadIssueKinds, loadReproductionSettings, reproductionFromConfig, type IssueKind, type ReproductionSettings } from "./issue-forms";
 
 export const FIXTURE_OWNER = "fixture";
 
@@ -62,6 +62,10 @@ const fixtureSchema = z.object({
   latestVersion: z.string().default("1.0.0"),
   /** What the issue forms of a real repository would give. Fixtures have no forms to read. */
   intakeLabels: z.array(z.string()).default(["triage"]),
+  /** Kinds a real repository would declare in its forms. Defaults to forms that set an Issue Type of the same name. */
+  kinds: z
+    .array(z.object({ name: z.string(), description: z.string().default(""), type: z.string().nullable().default(null), labels: z.array(z.string()).default([]), report: z.boolean().default(false) }))
+    .default(DEFAULT_KINDS.map((kind) => ({ ...kind, type: kind.name }))),
   issue: z.object({
     title: z.string(),
     body: z.string(),
@@ -87,8 +91,10 @@ export interface TriageContext {
   areas: Area[];
   /** Where reproductions start from, read from the repo's issue forms. */
   reproduction: ReproductionSettings;
-  /** Labels every issue form applies. A decision removes them. Empty when the repository has none. */
+  /** Labels several issue forms apply. A decision removes them. Empty when the repository has none. */
   intakeLabels: string[];
+  /** Kinds of issue the repository declares in its forms. */
+  kinds: IssueKind[];
   humanLabels: Set<string>;
   lastHumanActivity: number | null;
   pinned: boolean;
@@ -116,6 +122,7 @@ async function loadFixture(ref: IssueRef): Promise<TriageContext> {
     areas: config.areas.flatMap((group) => group.names.map((name) => toArea(name, group))),
     reproduction: reproductionFromConfig(config),
     intakeLabels: fixture.intakeLabels,
+    kinds: fixture.kinds,
     humanLabels: new Set(),
     lastHumanActivity: null,
     pinned: false,
@@ -135,13 +142,14 @@ export async function loadTriageContext(
   const config = override ?? (await loadRepoConfig(ref, signal));
   if (!config) return null;
 
-  const [issue, timeline, areas, pinned, reproduction, intakeLabels] = await Promise.all([
+  const [issue, timeline, areas, pinned, reproduction, intakeLabels, kinds] = await Promise.all([
     getIssue(ref, signal),
     getTimeline(ref, signal),
     loadAreas(config, signal),
     listPinnedIssues(ref, signal).catch(() => [] as number[]),
     loadReproductionSettings(config, signal),
     loadIntakeLabels(config, signal),
+    loadIssueKinds(config, signal),
   ]);
 
   const humanTimes: number[] = [];
@@ -164,6 +172,7 @@ export async function loadTriageContext(
     areas,
     reproduction,
     intakeLabels,
+    kinds,
     humanLabels: humanAppliedLabels(timeline),
     lastHumanActivity: humanTimes.length ? Math.max(...humanTimes) : null,
     pinned: pinned.includes(ref.issueNumber),

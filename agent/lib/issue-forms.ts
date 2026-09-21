@@ -111,9 +111,67 @@ export function reproductionFromForm(source: string): ReproductionSettings | nul
 const formLabelsSchema = z.object({ labels: z.union([z.array(z.string()), z.string()]).default([]) });
 
 /**
- * Labels that every issue form applies, so every new issue carries them. That is how a repository
- * marks an issue as waiting for triage, and it is the label a decision removes. A repository
- * without forms, whose forms share no label, or with one form that applies several, has none.
+ * One kind of issue a repository accepts, as one of its issue forms declares it: what it is called,
+ * and how the repository marks it, with an Issue Type, with labels, or with both.
+ */
+export interface IssueKind {
+  name: string;
+  description: string;
+  type: string | null;
+  /** Labels of the form, without the intake labels. */
+  labels: string[];
+  /** The form asks for a reproduction, so this kind reports something broken. The reproduction and fixed steps only run on it. */
+  report: boolean;
+}
+
+/** For a repository without issue forms. Nothing says how it marks a kind, so none is written. */
+export const DEFAULT_KINDS: IssueKind[] = [
+  { name: "Bug", description: "Something that worked or is documented to work behaves incorrectly, crashes or regresses.", type: null, labels: [], report: true },
+  { name: "Enhancement", description: "A request for a new feature, option or API, or a change to existing behavior.", type: null, labels: [], report: false },
+  { name: "Documentation", description: "The documentation is wrong, missing, outdated or unclear. The project behaves as intended.", type: null, labels: [], report: false },
+];
+
+const kindSchema = formLabelsSchema.extend({ name: z.string().min(1), description: z.string().default(""), type: z.string().nullish() });
+
+export function kindsFromForms(sources: readonly string[]): IssueKind[] {
+  const intake = intakeLabelsFromForms(sources);
+  const kinds: IssueKind[] = [];
+  for (const source of sources) {
+    let raw: unknown;
+    try {
+      raw = parseYaml(source);
+    } catch {
+      continue;
+    }
+    const form = kindSchema.safeParse(raw);
+    if (!form.success || kinds.some((kind) => kind.name === form.data.name)) continue;
+    kinds.push({
+      name: form.data.name,
+      description: form.data.description,
+      type: form.data.type ?? null,
+      labels: formLabels(form.data.labels).filter((label) => !intake.includes(label)),
+      report: reproductionFromForm(source) !== null,
+    });
+  }
+  return kinds.length ? kinds : DEFAULT_KINDS;
+}
+
+/** The kind an issue already carries, from its Issue Type or from a label only that kind applies. */
+export function kindOf(issue: { type: string | null; labels: readonly string[] }, kinds: readonly IssueKind[]): IssueKind | null {
+  const byType = issue.type ? kinds.filter((kind) => kind.type === issue.type) : [];
+  if (byType.length === 1) return byType[0] ?? null;
+  const own = (kind: IssueKind) => kind.labels.filter((label) => !kinds.some((other) => other !== kind && other.labels.includes(label)));
+  return (byType.length ? byType : kinds).find((kind) => own(kind).some((label) => issue.labels.includes(label))) ?? null;
+}
+
+function formLabels(labels: string | string[]): string[] {
+  return (typeof labels === "string" ? labels.split(",") : labels).map((label) => label.trim()).filter(Boolean);
+}
+
+/**
+ * Labels that several issue forms apply. They cannot say what kind of issue it is, so they are how
+ * a repository marks an issue as waiting for triage, and they are what a decision removes. A
+ * repository without forms, whose forms share no label, or with one form that applies several, has none.
  */
 export function intakeLabelsFromForms(sources: readonly string[]): string[] {
   const perForm: string[][] = [];
@@ -126,18 +184,19 @@ export function intakeLabelsFromForms(sources: readonly string[]): string[] {
     }
     const form = formLabelsSchema.safeParse(raw);
     if (!form.success) continue;
-    const labels = typeof form.data.labels === "string" ? form.data.labels.split(",") : form.data.labels;
-    perForm.push(labels.map((label) => label.trim()).filter(Boolean));
+    perForm.push(formLabels(form.data.labels));
   }
-  const [first = [], ...rest] = perForm;
   // A single form cannot tell its intake label from the one that says what the issue is, such as `bug`.
-  if (rest.length === 0 && first.length > 1) return [];
-  return first.filter((label) => rest.every((labels) => labels.includes(label)));
+  if (perForm.length === 1) return perForm[0]?.length === 1 ? perForm[0] : [];
+  // A label several forms apply cannot say which kind the issue is, so it marks the issue as new.
+  const shared = (label: string) => perForm.filter((labels) => labels.includes(label)).length > 1;
+  return [...new Set(perForm.flat())].filter(shared);
 }
 
 interface IssueForms {
   reproduction: ReproductionSettings;
   intakeLabels: string[];
+  kinds: IssueKind[];
 }
 
 const CACHE_TTL_MS = 5 * 60_000;
@@ -163,9 +222,14 @@ async function loadIssueForms(config: RepoConfig, signal?: AbortSignal): Promise
       break;
     }
   }
-  const value = { reproduction, intakeLabels: intakeLabelsFromForms(sources) };
+  const value = { reproduction, intakeLabels: intakeLabelsFromForms(sources), kinds: kindsFromForms(sources) };
   cache.set(key, { expires: Date.now() + CACHE_TTL_MS, value });
   return value;
+}
+
+/** See `kindsFromForms`. */
+export async function loadIssueKinds(config: RepoConfig, signal?: AbortSignal): Promise<IssueKind[]> {
+  return (await loadIssueForms(config, signal)).kinds;
 }
 
 /** See `intakeLabelsFromForms`. */

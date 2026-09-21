@@ -1,6 +1,6 @@
 import type { RepoConfig } from "../config";
 import { listOpenIssues, searchCount, searchIssues } from "./github";
-import { loadIntakeLabels } from "./issue-forms";
+import { loadIntakeLabels, loadIssueKinds, type IssueKind } from "./issue-forms";
 import { closedUpstreamPairs } from "./steps/upstream";
 import { listDecisions } from "./store";
 
@@ -17,10 +17,21 @@ export interface Digest {
   awaiting: { reason: string; issues: Link[] }[];
   duplicatesDetected: number;
   areaClusters: { label: string; count: number }[];
-  topEnhancements: (Link & { thumbsUp: number })[];
+  topRequests: (Link & { thumbsUp: number })[];
   sandbox: Record<string, number>;
   /** `untriaged` counts the open issues that still carry an intake label. `null` when the repository has none. */
   totals: { untriaged: number | null; intakeLabels: string[]; resolvedThisWeek: number };
+}
+
+/** Most upvoted open requests: the kinds that do not report something broken, found the way the repository marks them. */
+async function topRequests(repo: string, kinds: readonly IssueKind[], signal?: AbortSignal) {
+  const marks = kinds
+    .filter((kind) => !kind.report)
+    .map((kind) => (kind.type ? `type:"${kind.type}"` : kind.labels.length ? `label:${kind.labels.map((label) => `"${label}"`).join(",")}` : null))
+    .filter((mark) => mark !== null);
+  const found = await Promise.all([...new Set(marks)].map((mark) => searchIssues(`repo:${repo} is:issue is:open ${mark} sort:reactions-+1-desc`, 10, signal)));
+  const unique = new Map(found.flat().map((item) => [item.number, item]));
+  return [...unique.values()].sort((a, b) => (b.reactions?.["+1"] ?? 0) - (a.reactions?.["+1"] ?? 0)).slice(0, 10);
 }
 
 async function labeled(repo: string, label: string, signal?: AbortSignal): Promise<Link[]> {
@@ -32,10 +43,10 @@ export async function buildDigest(config: RepoConfig, signal?: AbortSignal): Pro
   const repo = `${config.owner}/${config.repo}`;
   const since = new Date(Date.now() - WEEK_MS).toISOString().slice(0, 10);
 
-  const intakeLabels = await loadIntakeLabels(config, signal);
+  const [intakeLabels, kinds] = await Promise.all([loadIntakeLabels(config, signal), loadIssueKinds(config, signal)]);
   const intake = intakeLabels.map((label) => `"${label}"`).join(",");
 
-  const [duplicate, answered, verification, question, upstreamClosed, open, enhancements, untriaged, resolved, decisions] =
+  const [duplicate, answered, verification, question, upstreamClosed, open, requests, untriaged, resolved, decisions] =
     await Promise.all([
       labeled(repo, "duplicate", signal),
       labeled(repo, "answered", signal),
@@ -43,7 +54,7 @@ export async function buildDigest(config: RepoConfig, signal?: AbortSignal): Pro
       labeled(repo, "question", signal),
       closedUpstreamPairs(repo, signal),
       listOpenIssues(config, [], signal),
-      searchIssues(`repo:${repo} is:issue is:open type:Enhancement sort:reactions-+1-desc`, 10, signal),
+      topRequests(repo, kinds, signal),
       intake ? searchCount(`repo:${repo} is:issue is:open label:${intake}`, signal) : null,
       searchCount(`repo:${repo} is:issue closed:>=${since}`, signal),
       listDecisions(),
@@ -83,7 +94,7 @@ export async function buildDigest(config: RepoConfig, signal?: AbortSignal): Pro
     ].filter((group) => group.issues.length > 0),
     duplicatesDetected: recent.filter((decision) => decision.step === "duplicate" && JSON.stringify(decision.actions).includes("close_duplicate")).length,
     areaClusters: [...clusters].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count).slice(0, 8),
-    topEnhancements: enhancements.map((item) => ({ number: item.number, title: item.title, url: item.html_url, thumbsUp: item.reactions?.["+1"] ?? 0 })),
+    topRequests: requests.map((item) => ({ number: item.number, title: item.title, url: item.html_url, thumbsUp: item.reactions?.["+1"] ?? 0 })),
     sandbox,
     totals: { untriaged, intakeLabels, resolvedThisWeek: resolved },
   };
@@ -117,11 +128,11 @@ export function digestEmbeds(digest: Digest): Record<string, unknown>[] {
       fields: fields.slice(0, 25),
     },
   ];
-  if (digest.topEnhancements.length) {
+  if (digest.topRequests.length) {
     embeds.push({
-      title: "Top enhancements by 👍",
+      title: "Top requests by 👍",
       color: 0xa2eeef,
-      description: digest.topEnhancements.map((item) => `${item.thumbsUp} 👍 [#${item.number}](${item.url}) ${item.title.slice(0, 70)}`).join("\n").slice(0, 4_000),
+      description: digest.topRequests.map((item) => `${item.thumbsUp} 👍 [#${item.number}](${item.url}) ${item.title.slice(0, 70)}`).join("\n").slice(0, 4_000),
     });
   }
   return embeds;

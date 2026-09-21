@@ -4,6 +4,7 @@ import { z } from "zod";
 import { isEnabled } from "../config";
 import { loadTriageContext } from "../lib/context";
 import { gh, loadRepoConfig } from "../lib/github";
+import { kindOf } from "../lib/issue-forms";
 import { updatePlan } from "../lib/plan";
 import { markOnce } from "../lib/store";
 import { runId } from "../lib/tool";
@@ -50,7 +51,7 @@ export default defineTool({
       if (!context || context.issue.isPullRequest || context.issue.state !== "open") continue;
 
       const mention =
-        community && context.issue.type === "Enhancement" && (config.dryRun || (await markOnce(ref, "enhancement-pr")))
+        community && kindOf(context.issue, context.kinds)?.report === false && (config.dryRun || (await markOnce(ref, "enhancement-pr")))
           ? [{ template: "enhancement_pr" as const, detail: `${pr.html_url} by @${pr.user?.login ?? "ghost"}.` }]
           : [];
       await updatePlan(runId(ctx), ref, config.dryRun, "link_pull_request", {

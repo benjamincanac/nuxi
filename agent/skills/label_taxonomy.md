@@ -22,11 +22,11 @@ You never pick labels. This page explains what the plan contains so you can desc
 | an area label | Only when the repository opted in. Part of the codebase involved, as declared by the repository: a package, a command, a component. The label format is the repository's own, such as `pkg: kit`. Most repositories record areas without labeling them, `classify_issue` then returns them in `areas` and nothing shows on the issue. | no |
 | `has pr` | A pull request references the issue. | no |
 
-The Issue Type (Bug, Enhancement, Documentation) is set only when it is missing.
+The kind of issue is marked the way the repository's issue forms mark it: an Issue Type, labels such as `bug`, or both. It is only added when missing, and a repository without forms gets neither.
 
 ## Removed by the bot
 
-The intake labels, once a decision from the first table is taken, and `needs reproduction` when the reporter provides one. Intake labels are the ones the repository's issue forms put on every new issue, such as `triage` or `pending triage`. A repository without them has nothing to remove. A label applied by a human is never removed. `apply_triage` enforces this and reports the labels it kept in `keptHumanLabels`.
+The intake labels, once a decision from the first table is taken, and `needs reproduction` when the reporter provides one. Intake labels are the ones several of the repository's issue forms apply, such as `triage` or `pending triage`. A repository without them has nothing to remove. A label applied by a human is never removed. `apply_triage` enforces this and reports the labels it kept in `keptHumanLabels`.
 
 ## Never applied by the bot
 
