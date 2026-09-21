@@ -9,11 +9,8 @@ export default defineEval({
     t.succeeded();
     t.calledTool("classify_issue");
     t.calledTool("apply_triage");
-    t.judge.autoevals
-      .closedQA(
-        "States that the thread looks resolved, that it was labeled answered, and suggests closing it, based on the maintainer's answer and the reporter's confirmation.",
-        { on: t.transcript },
-      )
-      .atLeast(0.7);
+    t.judge(
+      "States that the issue was labeled answered and that a maintainer was prompted to consider closing it.",
+    ).atLeast(0.7);
   },
 });

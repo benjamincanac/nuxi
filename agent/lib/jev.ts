@@ -1,9 +1,6 @@
 import { env } from "../config";
-import {
-  experimental_evaluate as evaluate,
-  type Experimental_EvaluationQuestion as Question,
-  type JSONValue,
-} from "ai";
+import type { Experimental_EvaluationQuestion as Question, JSONValue } from "ai";
+import { evaluate } from "eve/ai";
 
 /** Resolved through AI Gateway. */
 export function jevModel(): string {
