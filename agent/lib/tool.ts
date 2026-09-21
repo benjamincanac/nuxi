@@ -4,7 +4,8 @@ import { z } from "zod";
 import { requireApproval } from "../config";
 import { FIXTURE_OWNER, loadTriageContext, type TriageContext } from "./context";
 import { loadRepoConfig, type IssueRef } from "./github";
-import { isDryRunForced, isTriageRun } from "./store";
+import { hasWrites } from "./plan";
+import { getPlan, isDryRunForced, isTriageRun } from "./store";
 
 export const issueInput = z.object({
   owner: z.string().min(1).describe("Repository owner"),
@@ -34,13 +35,19 @@ export async function refuseDuringTriage(ctx: { session: { id: string; turn: { i
   }
 }
 
+const approvalInput = issueInput.extend({ comment: z.string().default("") });
+
 /** Pauses for a maintainer before a real write. Dry runs write nothing, so they never ask. */
 export async function writeApproval<T>({ toolInput }: ApprovalContext<T>): Promise<ApprovalStatus> {
-  const input = issueInput.safeParse(toolInput);
+  const input = approvalInput.safeParse(toolInput);
   if (!input.success) return "user-approval";
   if (input.data.owner === FIXTURE_OWNER) return "not-applicable";
   const config = await loadRepoConfig(input.data);
   if (!config) return { type: "denied", reason: "Triage is disabled for this repository." };
   if (config.dryRun || (await isDryRunForced(input.data))) return "not-applicable";
+  // A sweep asks about every open issue and most of them need nothing. Asking a maintainer to
+  // approve a run that writes nothing is the fastest way to teach them to approve without reading.
+  const plan = await getPlan(input.data);
+  if (plan && !plan.escalate && !hasWrites(plan) && !input.data.comment.trim()) return "not-applicable";
   return requireApproval() ? "user-approval" : "not-applicable";
 }

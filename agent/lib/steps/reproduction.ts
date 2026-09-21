@@ -21,6 +21,28 @@ function parseRepository(segments: string[]): ReproductionCheck["repository"] {
   return { owner, repo: repo.replace(/\.git$/, ""), ref: tree === "tree" && ref.length ? ref.join("/") : null };
 }
 
+/** First path segments on github.com that are not an account. */
+const NOT_ACCOUNTS = new Set([
+  "user-attachments",
+  "orgs",
+  "apps",
+  "marketplace",
+  "sponsors",
+  "settings",
+  "topics",
+  "collections",
+  "features",
+  "enterprise",
+  "notifications",
+  "search",
+  "explore",
+  "login",
+  "join",
+  "about",
+  "pricing",
+  "security",
+]);
+
 /** Repositories that show up as context in a report: the repo itself and its upstreams. */
 function contextRepositories(config: RepoConfig): Set<string> {
   return new Set([`${config.owner}/${config.repo}`, ...config.upstreams].map((slug) => slug.toLowerCase()));
@@ -48,6 +70,9 @@ export function extractReproductionLinks(text: string, config: RepoConfig, setti
       const reserved = ["issues", "pull", "blob", "commit", "discussions", "releases"];
       // Links to issues or to files are context, not reproductions.
       if (!repository || (segments[2] && reserved.includes(segments[2]))) continue;
+      // github.com/user-attachments/assets/<id> is a file a reporter dropped on the issue, and it
+      // parses as the repository "user-attachments/assets". The rest are site paths, not accounts.
+      if (NOT_ACCOUNTS.has(repository.owner.toLowerCase())) continue;
       if (ignored.has(`${repository.owner}/${repository.repo}`.toLowerCase())) continue;
       links.push({ url: url.href, kind: "github", repository });
     }
