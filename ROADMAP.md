@@ -70,6 +70,8 @@ Steps 1 and 2 need no code. Everything after them is the work.
 
 The playground is a test bench, not a part of nuxi. It is the only repository where a run can go from the webhook to a Discord approval to a real write without touching a real backlog, and that is what makes an eve upgrade safe to check. eve still ships breaking minors every few days, so it stays for now.
 
+Since the issue kinds are read from the issue forms, it runs in label mode on purpose: two forms of its own that mark a bug with `bug` and a request with `enhancement`, no Issue Type, and `source` turned off so those forms are the ones read. `nuxt/ui` covers the Issue Type path, so the playground is the only place that covers this one. Areas are empty there as a result, and the seeded issues no longer count as waiting for triage.
+
 It can go once two things are true: eve upgrades stop breaking the agent, and `nuxt/ui` runs with `dryRun: false`, which puts the same chain under real traffic.
 
 ### What goes with it
@@ -82,7 +84,9 @@ It can go once two things are true: eve upgrades stop breaking the agent, and `n
 | Step 4, and the playground wording in steps 5, 7 and 9 | [`SETUP.md`](SETUP.md) |
 | The production app's installation on the playground | GitHub |
 
-Two config keys are worth a second look at that point. `source` reads areas, releases and the next major branch from another repository, and the playground is the only config that needs it. If nothing else does, the key goes. `triageMaintainerIssues` was added for seeded issues, but a real repository may still want it, so it probably stays.
+Two config keys are worth a second look at that point. `source` reads areas, releases and the next major branch from another repository, and the playground was the only config that needed it, before it turned it off. If nothing else does, the key goes. `triageMaintainerIssues` was added for seeded issues, but a real repository may still want it, so it probably stays.
+
+Areas get the same look, earlier. They add one Jev question per component to every issue, and their only output is the "Top clusters" field of the weekly digest. If that field goes unread on the first real `nuxt/ui` digests, drop `areas` and `area` from the config. Removing them from the code only makes sense if no repository wants them.
 
 ### What stays
 
