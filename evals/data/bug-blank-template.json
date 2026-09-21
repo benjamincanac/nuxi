@@ -11,9 +11,7 @@
     "package": {
       "name": "@acme/ui"
     },
-    "nextMajor": {
-      "label": "v5"
-    },
+    "nextMajor": "v5",
     "reproduction": {
       "blank": [
         "acme-ui-starter"
@@ -59,6 +57,5 @@
     "blankTemplate": true,
     "version": null,
     "repository": null
-  },
-  "sandboxLogs": null
+  }
 }

@@ -80,7 +80,6 @@ const fixtureSchema = z.object({
   fixedCandidates: z.array(fixedCandidateSchema).default([]),
   upstreamCandidates: z.array(candidateSchema).default([]),
   reproduction: reproductionSchema.nullable().default(null),
-  sandboxLogs: z.object({ latest: z.string(), next: z.string().nullable() }).nullable().default(null),
 });
 
 export type Fixture = z.output<typeof fixtureSchema>;

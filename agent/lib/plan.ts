@@ -23,20 +23,6 @@ export interface PlannedMention {
   detail: string;
 }
 
-export type SandboxOutcome =
-  | "reproduced"
-  | "not_on_next"
-  | "no_longer_reproduces"
-  | "inconclusive"
-  | "failed"
-  | "skipped";
-
-export interface SandboxResult {
-  outcome: SandboxOutcome;
-  latestVersion: string | null;
-  summary: string;
-}
-
 /** Everything the run intends to do to one issue. Tools add to it, `apply_triage` executes it. */
 export interface TriagePlan {
   issue: IssueRef;
@@ -55,7 +41,6 @@ export interface TriagePlan {
   /** Security report: the mention is the only comment. */
   security: boolean;
   skipped: string | null;
-  sandbox: SandboxResult | null;
   /** Issue Type after classification, existing or proposed. */
   type: string | null;
   reproduction: ReproductionCheck | null;
@@ -77,7 +62,6 @@ export function emptyPlan(issue: IssueRef, runId: string, dryRun: boolean): Tria
     escalate: false,
     security: false,
     skipped: null,
-    sandbox: null,
     type: null,
     reproduction: null,
     latestVersion: null,
@@ -95,7 +79,6 @@ export interface PlanPatch {
   escalate?: boolean;
   security?: boolean;
   skipped?: string;
-  sandbox?: SandboxResult;
   type?: string;
   reproduction?: ReproductionCheck;
   latestVersion?: string;
@@ -121,7 +104,6 @@ export function mergePlan(plan: TriagePlan, step: string, patch: PlanPatch): Tri
     escalate: plan.escalate || (patch.escalate ?? false),
     security: plan.security || (patch.security ?? false),
     skipped: patch.skipped ?? plan.skipped,
-    sandbox: patch.sandbox ?? plan.sandbox,
     type: patch.type ?? plan.type,
     reproduction: patch.reproduction ?? plan.reproduction,
     latestVersion: patch.latestVersion ?? plan.latestVersion,

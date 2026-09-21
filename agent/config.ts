@@ -8,7 +8,6 @@ export const DECISIONS = [
   "question",
   "upstream",
   "reproduction",
-  "sandbox",
   "fixed",
   "duplicate",
   "answered",
@@ -77,25 +76,14 @@ export const repoConfigSchema = z.strictObject({
     )
     .default([]),
   upstreams: z.array(repoSlug).default([]),
-  /** npm package the repo publishes. Without it, version checks and sandbox runs are skipped. */
+  /** npm package the repo publishes. Without it, version checks are skipped. */
   package: z
     .strictObject({
-      // Interpolated into a shell command in the sandbox, so the charset is closed.
       name: z.string().regex(/^(@[a-z0-9][\w.-]*\/)?[a-z0-9][\w.-]*$/, "Expected an npm package name"),
     })
     .optional(),
-  /** Next major version. Breaking changes get `label`, the sandbox also builds against `branch`. */
-  nextMajor: z
-    .strictObject({
-      label: z.string().min(1),
-      branch: z.string().min(1).optional(),
-      /** Install spec for a build of `branch`. `{sha}` is replaced by the short commit sha. */
-      package: z
-        .string()
-        .regex(/^[\w@:/.{}+-]+$/, "Expected an npm install spec without spaces or shell characters")
-        .optional(),
-    })
-    .optional(),
+  /** Label for the next major version. An issue that needs a breaking change gets it. */
+  nextMajor: z.string().min(1).optional(),
   reproduction: z
     .strictObject({
       guide: z.url().optional(),

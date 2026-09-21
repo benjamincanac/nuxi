@@ -11,9 +11,7 @@
     "package": {
       "name": "@acme/ui"
     },
-    "nextMajor": {
-      "label": "v5"
-    },
+    "nextMajor": "v5",
     "reproduction": {
       "blank": [
         "acme-ui-starter"
@@ -70,6 +68,5 @@
       "repo": "acme-input-caret-repro",
       "ref": null
     }
-  },
-  "sandboxLogs": null
+  }
 }

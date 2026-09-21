@@ -173,7 +173,7 @@ export async function proposeSetup(ref: RepoRef, signal?: AbortSignal): Promise<
   const pkg = parsedPackage?.success ? parsedPackage.data : null;
   // Same charset as the schema. A legacy name outside it becomes a note, not a failed setup.
   if (pkg?.name && !pkg.private && /^(@[a-z0-9][\w.-]*\/)?[a-z0-9][\w.-]*$/.test(pkg.name)) config.package = { name: pkg.name };
-  else notes.push("No published npm package was found, so reproduction version checks and sandbox runs stay off.");
+  else notes.push("No published npm package was found, so reproduction version checks stay off.");
 
   const dependencies = Object.keys({ ...pkg?.devDependencies, ...pkg?.peerDependencies, ...pkg?.dependencies });
   const upstreams: string[] = [];
@@ -187,8 +187,7 @@ export async function proposeSetup(ref: RepoRef, signal?: AbortSignal): Promise<
   const majors = labelNames.filter((name) => /^v\d+$/.test(name)).sort((a, b) => Number(b.slice(1)) - Number(a.slice(1)));
   const nextLabel = majors.find((label) => branches.some((branch) => branch.name === label));
   if (nextLabel) {
-    config.nextMajor = { label: nextLabel, branch: nextLabel };
-    notes.push(`\`nextMajor.package\` is empty. Set it to an install spec for builds of the \`${nextLabel}\` branch, such as a pkg.pr.new URL with \`{sha}\`, to let the sandbox compare against it.`);
+    config.nextMajor = nextLabel;
   }
 
   const reproduireTemplate = [...paths].find((path) => path.startsWith(".github/reproduire/") && path.endsWith(".md"));

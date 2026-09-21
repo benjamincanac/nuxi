@@ -21,7 +21,7 @@ const MANAGED: Record<string, LabelStyle> = {
  */
 export function labelStyle(config: RepoConfig, label: string): LabelStyle | null {
   if (MANAGED[label]) return MANAGED[label];
-  if (label === config.nextMajor?.label) return { color: "b60205", description: "Requires a breaking change, targets the next major version" };
+  if (label === config.nextMajor) return { color: "b60205", description: "Requires a breaking change, targets the next major version" };
   if (label.startsWith("upstream/")) return { color: "1d76db", description: "Root cause in an upstream dependency" };
   if (isAreaLabel(config, label)) return { color: "bfd4f2", description: "Part of the codebase involved" };
   return null;

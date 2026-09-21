@@ -4,8 +4,8 @@
  *   pnpm backfill <owner/repo> [--config path.yml] [--limit 50] [--out backfill.csv]
  *   pnpm backfill <owner/repo> --url https://<deployment> [--limit 50] [--out backfill.csv]
  *
- * Local mode calls Jev and GitHub from this machine and skips the sandbox step.
- * With `--url` the deployment runs real sessions, sandbox included, and the rows are read back
+ * Local mode calls Jev and GitHub from this machine.
+ * With `--url` the deployment runs real sessions, and the rows are read back
  * from its decision log. Needs INTERNAL_API_SECRET. Nothing is ever written to GitHub.
  */
 import { execFileSync } from "node:child_process";
@@ -53,7 +53,6 @@ interface Row {
   addLabels: string[];
   removeLabels: string[];
   mentions: string[];
-  sandbox: string;
   facts: string[];
   probabilities: Record<string, number>;
 }
@@ -82,7 +81,7 @@ function probabilities(answers: Record<string, unknown>): Record<string, number>
 
 function csv(rows: Row[]): string {
   const cell = (value: unknown) => `"${String(value).replaceAll('"', '""')}"`;
-  const header = ["issue", "url", "title", "skipped", "escalate", "type", "add_labels", "remove_labels", "mentions", "sandbox", "facts", "probabilities"];
+  const header = ["issue", "url", "title", "skipped", "escalate", "type", "add_labels", "remove_labels", "mentions", "facts", "probabilities"];
   const lines = rows.map((row) =>
     [
       row.issue,
@@ -94,7 +93,6 @@ function csv(rows: Row[]): string {
       row.addLabels.join(" | "),
       row.removeLabels.join(" | "),
       row.mentions.join(" | "),
-      row.sandbox,
       row.facts.join(" | "),
       JSON.stringify(row.probabilities),
     ]
@@ -134,7 +132,6 @@ async function local(): Promise<Row[]> {
         addLabels: plan.addLabels,
         removeLabels: plan.removeLabels,
         mentions: plan.mentions.map((mention) => mention.template),
-        sandbox: plan.sandbox?.outcome ?? "not run",
         facts: plan.facts,
         probabilities: probabilities(answers),
       });
@@ -190,7 +187,6 @@ async function remote(base: string): Promise<Row[]> {
 
   return [...byIssue.entries()].map(([issue, decisions]) => {
     const applied = appliedSchema.safeParse(decisions.findLast((decision) => decision.step === "apply")?.actions);
-    const sandbox = z.object({ outcome: z.string() }).safeParse(decisions.findLast((decision) => decision.step === "sandbox")?.actions);
     const answers = Object.fromEntries(decisions.filter((decision) => decision.answers).map((decision) => [decision.step, decision.answers]));
     return {
       issue,
@@ -202,7 +198,6 @@ async function remote(base: string): Promise<Row[]> {
       addLabels: applied.success ? applied.data.addedLabels : [],
       removeLabels: applied.success ? applied.data.removedLabels : [],
       mentions: [],
-      sandbox: sandbox.success ? sandbox.data.outcome : "not run",
       facts: applied.success && applied.data.comment ? [applied.data.comment.replaceAll("\n", " ")] : [],
       probabilities: probabilities(answers),
     };

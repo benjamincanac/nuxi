@@ -18,7 +18,6 @@ export interface Digest {
   duplicatesDetected: number;
   areaClusters: { label: string; count: number }[];
   topRequests: (Link & { thumbsUp: number })[];
-  sandbox: Record<string, number>;
   /** `untriaged` counts the open issues that still carry an intake label. `null` when the repository has none. */
   totals: { untriaged: number | null; intakeLabels: string[]; resolvedThisWeek: number };
 }
@@ -73,13 +72,6 @@ export async function buildDigest(config: RepoConfig, signal?: AbortSignal): Pro
     for (const area of areas) clusters.set(area, (clusters.get(area) ?? 0) + 1);
   }
 
-  const sandbox: Record<string, number> = {};
-  for (const decision of recent) {
-    if (decision.step !== "sandbox") continue;
-    const outcome = (decision.actions as { outcome?: string } | null)?.outcome ?? "unknown";
-    sandbox[outcome] = (sandbox[outcome] ?? 0) + 1;
-  }
-
   return {
     repo,
     awaiting: [
@@ -95,7 +87,6 @@ export async function buildDigest(config: RepoConfig, signal?: AbortSignal): Pro
     duplicatesDetected: recent.filter((decision) => decision.step === "duplicate" && JSON.stringify(decision.actions).includes("close_duplicate")).length,
     areaClusters: [...clusters].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count).slice(0, 8),
     topRequests: requests.map((item) => ({ number: item.number, title: item.title, url: item.html_url, thumbsUp: item.reactions?.["+1"] ?? 0 })),
-    sandbox,
     totals: { untriaged, intakeLabels, resolvedThisWeek: resolved },
   };
 }
@@ -112,8 +103,6 @@ export function digestEmbeds(digest: Digest): Record<string, unknown>[] {
   if (digest.areaClusters.length) {
     fields.push({ name: "Top clusters", value: digest.areaClusters.map((cluster) => `\`${cluster.label}\` ${cluster.count}`).join("\n") });
   }
-  const sandbox = Object.entries(digest.sandbox);
-  if (sandbox.length) fields.push({ name: "Sandbox runs", value: sandbox.map(([outcome, count]) => `${outcome}: ${count}`).join("\n") });
 
   const embeds: Record<string, unknown>[] = [
     {

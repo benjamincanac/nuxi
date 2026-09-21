@@ -9,11 +9,10 @@ import {
 import { kindOf } from "../issue-forms";
 import type { TriageContext } from "../context";
 import { ask, choiceConfidence, clipBody, clipComments } from "../jev";
-import type { PlanPatch, SandboxResult } from "../plan";
+import type { PlanPatch } from "../plan";
 
 export type NextStep =
   | "validate_reproduction"
-  | "run_sandbox_repro"
   | "track_upstream"
   | "check_fixed_in_release"
   | "check_duplicate";
@@ -25,7 +24,7 @@ export interface ClassifyOutcome {
   type: string | null;
 }
 
-export function issueState(context: TriageContext, sandboxResult?: SandboxResult | null) {
+export function issueState(context: TriageContext) {
   const { issue } = context;
   return {
     title: issue.title,
@@ -38,7 +37,6 @@ export function issueState(context: TriageContext, sandboxResult?: SandboxResult
       isReporter: comment.author === issue.author,
       body: comment.body,
     })),
-    ...(sandboxResult ? { sandboxResult: { outcome: sandboxResult.outcome, summary: sandboxResult.summary } } : {}),
   };
 }
 
@@ -138,7 +136,6 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
         decided = true;
       } else {
         next.push("validate_reproduction");
-        if (isEnabled(config, "sandbox") && config.package) next.push("run_sandbox_repro");
       }
     }
 
@@ -149,7 +146,7 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
     if (!resolved && isEnabled(config, "duplicate") && !has("duplicate")) next.push("check_duplicate");
 
     if (!resolved && !waitsForReproduction && isEnabled(config, "breaking") && config.nextMajor && answers.needs_breaking_change.probability >= t.labels) {
-      labels.push(config.nextMajor.label);
+      labels.push(config.nextMajor);
       decided = true;
     }
   }

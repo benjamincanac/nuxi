@@ -3,7 +3,7 @@ import { fixedQuestions } from "../jev/questions";
 import type { FixedCandidate, TriageContext } from "../context";
 import { getTimeline, listReleases, searchIssues, type Release } from "../github";
 import { ask, clip } from "../jev";
-import type { PlanPatch, SandboxResult } from "../plan";
+import type { PlanPatch } from "../plan";
 import { issueState } from "./classify";
 
 const MAX_CANDIDATES = 8;
@@ -106,37 +106,28 @@ export interface FixedOutcome {
 export async function checkFixedInRelease(
   context: TriageContext,
   areaSlugs: string[],
-  sandbox: SandboxResult | null,
   signal?: AbortSignal,
 ): Promise<FixedOutcome> {
   const { config, issue } = context;
   const candidates = await findFixedCandidates(context, areaSlugs, signal);
-  const sandboxFixed = sandbox?.outcome === "no_longer_reproduces";
+  if (candidates.length === 0) return { answers: null, candidates, fixedBy: null, patch: {} };
 
-  if (candidates.length === 0 && !sandboxFixed) {
-    return { answers: null, candidates, fixedBy: null, patch: {} };
+  const answers = await ask(
+    fixedQuestions(candidates),
+    { issue: issueState(context), candidates: candidates.map(({ id, summary, release }) => ({ id, summary, release })) },
+    signal,
+  );
+  const fixedBy = candidates.find((candidate) => candidate.id === answers.fixed_by.choice) ?? null;
+  if (fixedBy === null || answers.is_fixed.probability < config.thresholds.is_fixed) {
+    return { answers, candidates, fixedBy: null, patch: {} };
   }
 
-  const answers = candidates.length
-    ? await ask(
-        fixedQuestions(candidates),
-        { issue: issueState(context, sandbox), candidates: candidates.map(({ id, summary, release }) => ({ id, summary, release })) },
-        signal,
-      )
-    : null;
-  const fixedBy = answers ? (candidates.find((candidate) => candidate.id === answers.fixed_by.choice) ?? null) : null;
-  const judged = answers !== null && fixedBy !== null && answers.is_fixed.probability >= config.thresholds.is_fixed;
-
-  if (!judged && !sandboxFixed) return { answers, candidates, fixedBy: null, patch: {} };
-
-  const evidence = judged && fixedBy
-    ? `This looks fixed by ${fixedBy.id}${fixedBy.release ? ` in ${fixedBy.release}` : ""}.`
-    : `This no longer reproduces on ${sandbox?.latestVersion ? `v${sandbox.latestVersion}` : "the latest version"}.`;
+  const evidence = `This looks fixed by ${fixedBy.id}${fixedBy.release ? ` in ${fixedBy.release}` : ""}.`;
 
   return {
     answers,
     candidates,
-    fixedBy: judged ? fixedBy : null,
+    fixedBy,
     patch: {
       addLabels: issue.labels.includes("needs verification") ? [] : ["needs verification"],
       removeLabels: context.intakeLabels,

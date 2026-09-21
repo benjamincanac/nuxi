@@ -11,9 +11,7 @@
     "package": {
       "name": "@acme/ui"
     },
-    "nextMajor": {
-      "label": "v5"
-    },
+    "nextMajor": "v5",
     "reproduction": {
       "blank": [
         "acme-ui-starter"
@@ -52,7 +50,6 @@
   "fixedCandidates": [],
   "upstreamCandidates": [],
   "reproduction": null,
-  "sandboxLogs": null,
   "kinds": [
     {
       "name": "Bug report",

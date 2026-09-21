@@ -17,7 +17,7 @@ An [eve](https://eve.dev) agent that triages GitHub issues as the `nuxiai[bot]` 
 | --- | --- |
 | `agent/config.ts` | Schema and defaults of `.github/nuxi.yml` |
 | `agent/lib/jev/questions.ts` | Every Jev question |
-| `agent/lib/steps/` | The pipeline: classify, reproduction, sandbox, fixed, duplicate, upstream |
+| `agent/lib/steps/` | The pipeline: classify, reproduction, fixed, duplicate, upstream |
 | `agent/lib/apply.ts`, `agent/lib/labels.ts` | The single writer and the labels it may apply |
 | `agent/lib/issue-forms.ts` | What is read from a repository's issue forms |
 | `agent/lib/setup.ts` | The setup pull request |

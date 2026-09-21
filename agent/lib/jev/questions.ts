@@ -134,7 +134,7 @@ export function fixedQuestions(candidates: readonly { id: string; summary: strin
     is_fixed: {
       type: "boolean",
       instructions:
-        "Is the problem described in the issue likely fixed in a published release, given the candidates and the sandbox result when present? A merged pull request that references this issue, addresses the same behavior and shipped in a release is strong evidence. A reproduction still pinned to an older version is not evidence against it.",
+        "Is the problem described in the issue likely fixed in a published release, given the candidates? A merged pull request that references this issue, addresses the same behavior and shipped in a release is strong evidence. A reproduction still pinned to an older version is not evidence against it.",
     },
   } as const satisfies Record<string, Question>;
 }

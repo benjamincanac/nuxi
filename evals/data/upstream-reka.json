@@ -11,9 +11,7 @@
     "package": {
       "name": "@acme/ui"
     },
-    "nextMajor": {
-      "label": "v5"
-    },
+    "nextMajor": "v5",
     "reproduction": {
       "blank": [
         "acme-ui-starter"
@@ -59,6 +57,5 @@
       "body": "getBoundingClientRect is called on a reference that can already be null if the element unmounts during a pending position update."
     }
   ],
-  "reproduction": null,
-  "sandboxLogs": null
+  "reproduction": null
 }

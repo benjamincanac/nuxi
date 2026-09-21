@@ -15,7 +15,6 @@ nuxi runs today as one person's deployment: the GitHub App, the Vercel project a
 | Their own approvals and digest | `discord.approvalsChannel` and `discord.digestChannel` in their repository's config. |
 | Who can approve | Whoever can see that channel. |
 | Their own thresholds | `thresholds` in their repository's config. |
-| No sandbox | Leave `sandbox` out of `decisions` in their repository's config. |
 
 A maintainer who owns a repository under an allowed account can therefore adopt nuxi without asking anyone, which is the property to preserve.
 
@@ -52,9 +51,9 @@ The cheapest fix is `/ask`: the backlog conversation already runs per repository
 
 #### 5. Cost, and who notices it
 
-Two things cost real money per issue: the Jev calls in `classify_issue`, and the Vercel Sandbox in `run_sandbox_repro`. The sandbox is the expensive one, and it runs in dry-run too, twice per issue on a repository that configures `nextMajor.package`.
+What costs money per issue is the Jev calls, one per pipeline step, each carrying the issue and its comments again.
 
-Before this is open to every repository in an organization, the sandbox needs a budget per repository, and the digest should report what the week cost. A team that adopts nuxi should be able to see its own bill. Turning the sandbox off already works through `decisions`, but it is all or nothing.
+Before this is open to every repository in an organization, the digest should report what the week cost. A team that adopts nuxi should be able to see its own bill.
 
 ### Rollout order
 
@@ -62,7 +61,7 @@ Before this is open to every repository in an organization, the sandbox needs a 
 2. A second repository adopts it with its own Discord channel, which is what proves the per-repository routing.
 3. Transfer the app and the project to the organization.
 4. Move the `/ask` list out of the environment, and answer "what did you decide" from `/ask`.
-5. Add the sandbox budget, then say yes to anyone who asks.
+5. Report the weekly cost per repository, then say yes to anyone who asks.
 
 Steps 1 and 2 need no code. Everything after them is the work.
 

@@ -7,7 +7,7 @@ You need:
 - Node 24 and pnpm.
 - The [Vercel CLI](https://vercel.com/docs/cli), logged in: `pnpm add -g vercel`, then `vercel login`.
 - The [GitHub CLI](https://cli.github.com), logged in: `gh auth login`. The local scripts use its token.
-- A Vercel team on the Pro plan, with Vercel Sandbox available. One schedule runs every minute, which Hobby rejects at deploy time, and the build prewarms a sandbox.
+- A Vercel team on the Pro plan. One schedule runs every minute, which Hobby rejects at deploy time.
 - A GitHub account where you can create a GitHub App and a repository.
 - A Discord account. A server is optional, a direct message with the app is enough.
 
@@ -255,7 +255,7 @@ curl -X POST https://<production-url>/ops/setup/trigger \
 curl "https://<production-url>/ops/decisions?repo=<owner>/<repo>&since=<iso date>" \
   -H "authorization: Bearer $INTERNAL_API_SECRET"
 
-# Or as a CSV, sandbox runs included
+# Or as a CSV
 pnpm backfill <owner>/<repo> --url https://<production-url>
 ```
 

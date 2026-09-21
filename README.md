@@ -10,7 +10,7 @@ To deploy it, follow [`SETUP.md`](SETUP.md).
 
 ```
 webhook, daily sweep or ops route ─▶ queue ─▶ session
-classify_issue ─▶ track_upstream ─▶ validate_reproduction ─▶ run_sandbox_repro
+classify_issue ─▶ track_upstream ─▶ validate_reproduction
                ─▶ check_fixed_in_release ─▶ check_duplicate ─▶ apply_triage
 ```
 
@@ -30,8 +30,8 @@ dryRun: true                  # default. Log what would be done, write nothing.
 maintainers: [benjamincanac]  # mentioned for decisions, their own issues are skipped
 
 upstreams: [unovue/reka-ui]   # root cause candidates, labeled `upstream/<repo>`
-package: { name: "@nuxt/ui" } # enables version checks and sandbox runs
-nextMajor: { label: v5, branch: v5, package: "https://pkg.pr.new/@nuxt/ui@{sha}" }
+package: { name: "@nuxt/ui" } # enables reproduction version checks
+nextMajor: v5                 # label for issues that need a breaking change
 
 # Named parts of the codebase: packages, commands, components. Jev says which ones an issue is about.
 # Used to match changelog scopes and to cluster the backlog. No label unless an entry sets `label`.
@@ -59,10 +59,6 @@ There is no install webhook, so the daily sweep opens it. `POST /ops/setup/trigg
 Nothing to set up. nuxi creates a label the first time it applies it and never edits an existing one. It can apply `duplicate`, `answered`, `question`, `needs verification`, `needs reproduction`, `a11y`, `stale`, the next major label and `upstream/<repo>`. It only removes the labels that several issue forms of the repository apply, such as `triage`. A repository without such a label has nothing to remove.
 
 The kind of issue is read from the forms too. Each form says how the repository marks it, with an Issue Type, with labels such as `bug`, or with both, and nuxi marks an unmarked issue the same way. The form with a reproduction field is the one that gets the reproduction and fixed checks. A repository without forms gets neither type nor label.
-
-## Sandbox
-
-For a bug whose reproduction is a repository, nuxi builds it against the latest published version, and against the next major branch when configured. Network is limited to the npm registry and the host serving the next major build, install scripts are off, and the run stops after 8 minutes. Only install, typecheck and build failures can be observed. Anything visual comes back as `inconclusive` and is left out of the comment.
 
 ## Commands
 
