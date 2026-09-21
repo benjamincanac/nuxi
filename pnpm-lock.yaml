@@ -12,7 +12,7 @@ importers:
         specifier: ^1.38.4
         version: 1.38.4
       '@vercel/connect':
-        specifier: 2.2.0
+        specifier: ^2.2.0
         version: 2.2.0(ai@7.0.106(zod@4.5.4))(eve@0.58.1(ai@7.0.106(zod@4.5.4))(microsandbox@0.7.2))
       ai:
         specifier: ^7.0.105
@@ -24,11 +24,11 @@ importers:
         specifier: ^2.9.1
         version: 2.9.1
       zod:
-        specifier: 4.5.4
+        specifier: ^4.5.4
         version: 4.5.4
     devDependencies:
       '@types/node':
-        specifier: 24.x
+        specifier: ^24
         version: 24.13.5
       microsandbox:
         specifier: ^0.7.2
@@ -37,7 +37,7 @@ importers:
         specifier: ^4.23.13
         version: 4.23.13
       typescript:
-        specifier: 7.0.2
+        specifier: ^7.0.2
         version: 7.0.2
 
 packages:
