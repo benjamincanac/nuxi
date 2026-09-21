@@ -7,7 +7,7 @@ import { isBot, loadRepoConfig, noteInstallation } from "../lib/github";
 import { enqueue, type QueueItem } from "../lib/store";
 
 // The GitHub App slug. `@tia` belongs to a GitHub user, so mentioning it would ping a stranger.
-const BOT_NAME = "tia-agent";
+const BOT_NAME = "hey-tia";
 const MENTION = new RegExp(`(^|\\s)@${BOT_NAME}\\b`, "i");
 
 const issueLabels = z.object({

@@ -102,7 +102,7 @@ In the form, keep **Managed**, pick your account as the namespace, and leave **T
 | `workflows` | write | Removing the workflows tia replaces, in the setup pull request |
 | `metadata` | read | Required by GitHub |
 
-Set **App Name** to the GitHub App slug you want, `tia-agent` here. It has to be free across GitHub users, organizations and apps, and it is what people mention and what comments are signed with, `@tia-agent` and `tia-agent[bot]`. Keep **Connector Name** as the UID the code looks up, `tia-preview` or `tia`. Then match `BOT_NAME` in [`agent/channels/github.ts`](agent/channels/github.ts).
+Set **App Name** to the GitHub App slug you want, `hey-tia` here. It has to be free across GitHub users, organizations and apps, and it is what people mention and what comments are signed with, `@hey-tia` and `hey-tia[bot]`. Keep **Connector Name** as the UID the code looks up, `tia-preview` or `tia`. Then match `BOT_NAME` in [`agent/channels/github.ts`](agent/channels/github.ts).
 
 GitHub then asks where to install the app. Pick **Only select repositories** and the playground.
 
@@ -220,7 +220,7 @@ Then, on the playground:
 1. Open an issue without a reproduction. Within a minute or two the approvals channel shows the run, then an Approve prompt with what it would write.
 2. Approve. The issue gets `needs reproduction`, loses the label its issue forms apply, and receives one comment.
 3. Reply with a repository link. tia removes the label and runs again.
-4. Comment `@tia-agent can you triage this again?` on another issue.
+4. Comment `@hey-tia can you triage this again?` on another issue.
 5. In Discord, `/ask message: what's waiting on me?`.
 
 ```sh

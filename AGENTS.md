@@ -1,6 +1,6 @@
 # tia
 
-An [eve](https://eve.dev) agent that triages GitHub issues as the `tia-agent[bot]` GitHub App. [`README.md`](README.md) explains the design, [`SETUP.md`](SETUP.md) how to deploy it.
+An [eve](https://eve.dev) agent that triages GitHub issues as the `hey-tia[bot]` GitHub App. [`README.md`](README.md) explains the design, [`SETUP.md`](SETUP.md) how to deploy it.
 
 ## Rules
 
