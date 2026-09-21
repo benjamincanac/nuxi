@@ -30,7 +30,9 @@ export async function findSimilarIssues(
   for (const terms of [words, words.slice(0, 3)]) {
     const items = await searchIssues(`repo:${repo.owner}/${repo.repo} is:issue ${terms.join(" ")}`, limit * 2, signal);
     for (const item of items) {
-      if (item.number === exclude || seen.has(item.number)) continue;
+      // An issue can only duplicate one opened before it. Two reports opened together would
+      // otherwise each be labeled a duplicate of the other.
+      if ((exclude !== null && item.number >= exclude) || seen.has(item.number)) continue;
       seen.set(item.number, {
         number: item.number,
         title: item.title,
