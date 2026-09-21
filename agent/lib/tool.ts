@@ -47,7 +47,9 @@ export async function writeApproval<T>({ toolInput }: ApprovalContext<T>): Promi
   if (config.dryRun || (await isDryRunForced(input.data))) return "not-applicable";
   // A sweep asks about every open issue and most of them need nothing. Asking a maintainer to
   // approve a run that writes nothing is the fastest way to teach them to approve without reading.
+  // An escalated or skipped plan is blocked in `applyPlan`, so it never writes either.
   const plan = await getPlan(input.data);
-  if (plan && !plan.escalate && !hasWrites(plan) && !input.data.comment.trim()) return "not-applicable";
+  if (plan && (plan.escalate || plan.skipped)) return "not-applicable";
+  if (plan && !hasWrites(plan) && !input.data.comment.trim()) return "not-applicable";
   return requireApproval() ? "user-approval" : "not-applicable";
 }
