@@ -113,7 +113,7 @@ const formLabelsSchema = z.object({ labels: z.union([z.array(z.string()), z.stri
 /**
  * Labels that every issue form applies, so every new issue carries them. That is how a repository
  * marks an issue as waiting for triage, and it is the label a decision removes. A repository
- * without forms, or whose forms share no label, has none.
+ * without forms, whose forms share no label, or with one form that applies several, has none.
  */
 export function intakeLabelsFromForms(sources: readonly string[]): string[] {
   const perForm: string[][] = [];
@@ -130,6 +130,8 @@ export function intakeLabelsFromForms(sources: readonly string[]): string[] {
     perForm.push(labels.map((label) => label.trim()).filter(Boolean));
   }
   const [first = [], ...rest] = perForm;
+  // A single form cannot tell its intake label from the one that says what the issue is, such as `bug`.
+  if (rest.length === 0 && first.length > 1) return [];
   return first.filter((label) => rest.every((labels) => labels.includes(label)));
 }
 
