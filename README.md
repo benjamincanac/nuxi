@@ -44,7 +44,7 @@ help: https://nuxt.com        # where non-triage questions are pointed
 
 The other keys are `decisions`, `thresholds`, `sweep`, `discord`, `reproduction`, `source` and `triageMaintainerIssues`. The schema with its defaults is [`agent/config.ts`](agent/config.ts), and [`examples/`](examples) has a full file for `nuxt/ui` and one for a playground.
 
-What a repository already declares is not repeated. The reproduction guide, the starter links and the playground host come from the reproduction field of its issue form.
+What a repository already declares is not repeated. The reproduction guide, the starter links and the playground host come from the reproduction field of its issue form. Without a guide there, the request links [Why Reproductions are Required](https://antfu.me/posts/why-reproductions-are-required).
 
 Global settings are environment variables, listed in [`.env.example`](.env.example).
 

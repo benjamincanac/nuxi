@@ -9,10 +9,13 @@ import { getLastAnnounced, isPreviewWriteAllowed, recordDecision, setLastAnnounc
 
 export const MAX_COMMENT_WORDS = 80;
 
+/** Why a reproduction is asked for, whatever the project. Used when the repository links no guide of its own. */
+const DEFAULT_REPRODUCTION_GUIDE = "https://antfu.me/posts/why-reproductions-are-required";
+
 /** Short templated request, built from what the repo's issue form says about reproductions. */
 export function reproductionRequest(settings: ReproductionSettings): string {
-  const { guide, templates } = settings;
-  const ask = `Would you be able to provide a ${guide ? `[reproduction](${guide})` : "reproduction"}? 🙏`;
+  const { templates } = settings;
+  const ask = `Would you be able to provide a [reproduction](${settings.guide ?? DEFAULT_REPRODUCTION_GUIDE})? 🙏`;
   if (templates.length === 0) return `${ask} Please keep it as minimal as possible.`;
   const links = templates.map((template) => `[${template.name.replace(/^the\s+/i, "")}](${template.url})`);
   const list = links.length > 1 ? `${links.slice(0, -1).join(", ")} or ${links.at(-1)}` : links[0];
