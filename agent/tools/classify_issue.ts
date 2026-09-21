@@ -4,7 +4,7 @@ import { z } from "zod";
 import { skipReason } from "../lib/context";
 import { updatePlan } from "../lib/plan";
 import { classify } from "../lib/steps/classify";
-import { recordDecision } from "../lib/store";
+import { recordDecision, rememberClassified } from "../lib/store";
 import { issueInput, requireContext, runId } from "../lib/tool";
 
 export default defineTool({
@@ -26,6 +26,8 @@ export default defineTool({
 
     const outcome = await classify(context, ctx.abortSignal);
     const plan = await updatePlan(run, ref, context.config.dryRun, "classify", { ...outcome.patch, ...(outcome.type ? { type: outcome.type } : {}) });
+    // Kept for the release passes, which re-check the fix without classifying again.
+    await rememberClassified(ref, { releaseCheck: outcome.report && !plan.escalate && !plan.security, areas: plan.areas });
     await recordDecision({
       at: new Date().toISOString(),
       repo: `${ref.owner}/${ref.repo}`,

@@ -22,6 +22,8 @@ export interface ClassifyOutcome {
   patch: PlanPatch;
   next: NextStep[];
   type: string | null;
+  /** The kind asks for a reproduction: something is broken, and a release can fix it. */
+  report: boolean;
 }
 
 /** `maxComments` is how much of the thread the step reads. It defaults to all of it. */
@@ -60,6 +62,7 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
   const chosen = choiceConfidence(answers.type) >= t.labels ? context.kinds.find((candidate) => candidate.name === answers.type.choice) : null;
   const kind = kindOf(issue, context.kinds) ?? chosen ?? null;
   const type = kind?.type ?? kind?.name ?? issue.type;
+  const report = kind?.report === true;
   const patch: PlanPatch = { addLabels: [], removeLabels: [], facts: [], mentions: [] };
   const labels = patch.addLabels ?? [];
   const facts = patch.facts ?? [];
@@ -73,6 +76,7 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
     return {
       answers,
       type,
+      report,
       next: [],
       patch: {
         security: true,
@@ -85,7 +89,7 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
   }
 
   if (answers.needs_human.probability >= t.needs_human) {
-    return { answers, type, next: [], patch: { escalate: true } };
+    return { answers, type, report, next: [], patch: { escalate: true } };
   }
 
   // The kind is marked the way the repository's form marks it: an Issue Type, labels, or both.
@@ -169,5 +173,5 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
   patch.addLabels = labels.filter((label) => !issue.labels.includes(label));
   if (decided) patch.removeLabels = context.intakeLabels;
 
-  return { answers, patch, next, type };
+  return { answers, patch, next, type, report };
 }

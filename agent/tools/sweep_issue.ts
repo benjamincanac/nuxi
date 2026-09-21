@@ -8,7 +8,7 @@ import { getTimeline, listReleases } from "../lib/github";
 import { ask, clip } from "../lib/jev";
 import { updatePlan, type PlanPatch } from "../lib/plan";
 import { issueState } from "../lib/steps/classify";
-import { markOnce, recordDecision } from "../lib/store";
+import { getClassified, markOnce, recordDecision } from "../lib/store";
 import { releaseCheckApplies } from "../lib/sweep";
 import { issueInput, requireContext, runId } from "../lib/tool";
 
@@ -54,7 +54,7 @@ export default defineTool({
     // A release changes whether the issue is fixed, nothing about its kind or the part it touches,
     // so it re-checks that alone. Anything else on the issue is a `sweep` and takes the branches below.
     if (release) {
-      if (releaseCheckApplies(config, issue, context.kinds)) next = ["check_fixed_in_release"];
+      if (releaseCheckApplies(config, issue, context.kinds, await getClassified(ref))) next = ["check_fixed_in_release"];
     } else if (issue.labels.includes("needs reproduction")) {
       const since = labeledAt("needs reproduction");
       const age = daysSince(since);

@@ -2,7 +2,7 @@ import { isEnabled, type RepoConfig } from "../config";
 import { listOpenIssues, listReleases, type Issue } from "./github";
 import { kindOf, loadIntakeLabels, loadIssueKinds, type IssueKind } from "./issue-forms";
 import { closedUpstreamPairs } from "./steps/upstream";
-import { alreadyEvaluated, enqueue, getLastSeenRelease, setLastSeenRelease, trackUpstreamPair, type QueueItem } from "./store";
+import { alreadyEvaluated, enqueue, getClassified, getLastSeenRelease, setLastSeenRelease, trackUpstreamPair, type Classified, type QueueItem } from "./store";
 
 const DAY_MS = 24 * 60 * 60_000;
 /** Labels nuxi applies that wait on someone. The intake labels of the repository are swept too. */
@@ -14,11 +14,18 @@ export const DISPATCH_BATCH = 5;
 /**
  * A release re-opens one question and one only: is this fixed. It is worth asking about an open
  * report of the repository's own, and not about an issue that already waits on someone.
+ * What classification remembered wins: it also knows the issues a maintainer took over, and the
+ * kind of an issue the repository does not mark. An issue nuxi never classified is judged on its marks.
  */
-export function releaseCheckApplies(config: RepoConfig, issue: Pick<Issue, "labels" | "type">, kinds: readonly IssueKind[]): boolean {
+export function releaseCheckApplies(
+  config: RepoConfig,
+  issue: Pick<Issue, "labels" | "type">,
+  kinds: readonly IssueKind[],
+  classified: Classified | null,
+): boolean {
   if (!isEnabled(config, "fixed")) return false;
   if (issue.labels.includes("needs reproduction") || issue.labels.includes("needs verification")) return false;
-  return kindOf(issue, kinds)?.report === true;
+  return classified?.releaseCheck ?? kindOf(issue, kinds)?.report === true;
 }
 
 function thresholdsCrossed(issue: Issue, config: RepoConfig): number {
@@ -61,7 +68,7 @@ export async function sweepRepo(config: RepoConfig, options: { force?: boolean; 
     const fingerprint = `${issue.updatedAt}:${thresholdsCrossed(issue, config)}`;
     const changed = options.force === true || !(await alreadyEvaluated(issue, fingerprint));
     // An unchanged issue is only worth a session when the release could have fixed it.
-    if (!changed && !(newRelease && releaseCheckApplies(config, issue, kinds))) {
+    if (!changed && !(newRelease && releaseCheckApplies(config, issue, kinds, await getClassified(issue)))) {
       unchanged++;
       continue;
     }

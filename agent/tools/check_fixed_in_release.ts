@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools";
 
 import { updatePlan } from "../lib/plan";
 import { checkFixedInRelease, knownAreas } from "../lib/steps/fixed";
-import { getPlan, recordDecision } from "../lib/store";
+import { getClassified, getPlan, recordDecision } from "../lib/store";
 import { issueInput, requireContext, runId } from "../lib/tool";
 
 export default defineTool({
@@ -13,7 +13,8 @@ export default defineTool({
   async execute(ref, ctx) {
     const context = await requireContext(ref, ctx.abortSignal);
     const plan = await getPlan(ref);
-    const areaSlugs = knownAreas(context, plan?.areas ?? []);
+    // A release pass has no classify step in its plan. The areas come from the last one that ran.
+    const areaSlugs = knownAreas(context, [...(plan?.areas ?? []), ...((await getClassified(ref))?.areas ?? [])]);
 
     const outcome = await checkFixedInRelease(context, areaSlugs, ctx.abortSignal);
     await updatePlan(runId(ctx), ref, context.config.dryRun, "check_fixed_in_release", outcome.patch);

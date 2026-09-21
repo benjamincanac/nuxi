@@ -264,7 +264,25 @@ export async function isDryRunForced(ref: IssueRef): Promise<boolean> {
   return (await kv().get<number>(`nuxi:dry:${issueKey(ref)}`)) !== null;
 }
 
-/** Skips the daily re-evaluation when neither the issue nor the latest release changed. */
+/**
+ * What classification found that a release does not change. A release pass runs without
+ * `classify_issue`, and the issue itself only says this much when the repository marks kinds and areas.
+ */
+export interface Classified {
+  /** A report a maintainer did not have to take over: worth re-checking for a fix when a release lands. */
+  releaseCheck: boolean;
+  areas: string[];
+}
+
+export function rememberClassified(ref: IssueRef, classified: Classified): Promise<void> {
+  return kv().set(`nuxi:classified:${issueKey(ref)}`, classified, YEAR_SECONDS);
+}
+
+export function getClassified(ref: IssueRef): Promise<Classified | null> {
+  return kv().get<Classified>(`nuxi:classified:${issueKey(ref)}`);
+}
+
+/** Skips the daily re-evaluation when the issue did not change and crossed no follow-up threshold. */
 export async function alreadyEvaluated(ref: IssueRef, fingerprint: string): Promise<boolean> {
   const key = `nuxi:evaluated:${issueKey(ref)}`;
   if ((await kv().get<string>(key)) === fingerprint) return true;
