@@ -12,14 +12,9 @@ export default defineTool({
   async execute(ref, ctx) {
     const context = await requireContext(ref, ctx.abortSignal);
     const outcome = await validateReproduction(context, ctx.abortSignal);
-    await updatePlan(runId(ctx), ref, context.config.dryRun, "validate_reproduction", {
-      ...outcome.patch,
-      ...(outcome.latestVersion ? { latestVersion: outcome.latestVersion } : {}),
-      ...(outcome.valid ? { reproduction: outcome.valid } : {}),
-    });
+    await updatePlan(runId(ctx), ref, context.config.dryRun, "validate_reproduction", outcome.patch);
     return {
       valid: outcome.valid !== null,
-      runnable: outcome.valid?.repository != null,
       latestVersion: outcome.latestVersion,
       checks: outcome.checks,
       facts: outcome.patch.facts ?? [],

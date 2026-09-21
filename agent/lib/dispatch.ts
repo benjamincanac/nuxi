@@ -64,8 +64,9 @@ const PRIORITY: Record<QueueReason, number> = {
   issue: 3,
   pull_request: 3,
   upstream_closed: 4,
-  release: 5,
-  sweep: 6,
+  // A release pass only re-checks the fix. Merged with a sweep of the same issue, the sweep must win.
+  sweep: 5,
+  release: 6,
 };
 
 /** Several events on the same issue collapse into one run that keeps every flag. */

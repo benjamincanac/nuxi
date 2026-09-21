@@ -1,4 +1,3 @@
-import type { ReproductionCheck } from "./context";
 import type { IssueRef } from "./github";
 import { getPlan, savePlan } from "./store";
 
@@ -43,8 +42,6 @@ export interface TriagePlan {
   skipped: string | null;
   /** Issue Type after classification, existing or proposed. */
   type: string | null;
-  reproduction: ReproductionCheck | null;
-  latestVersion: string | null;
   steps: string[];
 }
 
@@ -63,8 +60,6 @@ export function emptyPlan(issue: IssueRef, runId: string, dryRun: boolean): Tria
     security: false,
     skipped: null,
     type: null,
-    reproduction: null,
-    latestVersion: null,
     steps: [],
   };
 }
@@ -80,8 +75,6 @@ export interface PlanPatch {
   security?: boolean;
   skipped?: string;
   type?: string;
-  reproduction?: ReproductionCheck;
-  latestVersion?: string;
   /** A duplicate needs no reproduction: drops the planned `needs reproduction` and its request. */
   supersedesReproduction?: boolean;
 }
@@ -105,8 +98,6 @@ export function mergePlan(plan: TriagePlan, step: string, patch: PlanPatch): Tri
     security: plan.security || (patch.security ?? false),
     skipped: patch.skipped ?? plan.skipped,
     type: patch.type ?? plan.type,
-    reproduction: patch.reproduction ?? plan.reproduction,
-    latestVersion: patch.latestVersion ?? plan.latestVersion,
     steps: unique([...plan.steps, step]),
   };
 }

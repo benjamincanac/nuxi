@@ -2,6 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 
 import { isEnabled } from "../config";
+import { skipReason } from "../lib/context";
 import { staleQuestions } from "../lib/jev/questions";
 import { getTimeline, listReleases } from "../lib/github";
 import { ask, clip } from "../lib/jev";
@@ -27,6 +28,15 @@ export default defineTool({
   async execute({ release, ...ref }, ctx) {
     const context = await requireContext(ref, ctx.abortSignal);
     const { config, issue } = context;
+
+    // The issue was queued minutes to hours ago. It may have been closed, pinned or picked up by a
+    // human since, and a pass that never reaches `classify_issue` has no other place to notice.
+    const skipped = skipReason(context, false);
+    if (skipped) {
+      await updatePlan(runId(ctx), ref, config.dryRun, "sweep_issue", { skipped });
+      return { skipped, facts: [] as string[], mentions: [] as string[], next: [] as string[] };
+    }
+
     const { followUpDays, mentionDays, staleDays } = config.sweep;
     // Dry runs never consume the once-only markers.
     const once = (marker: string) => (config.dryRun ? Promise.resolve(true) : markOnce(ref, marker));
@@ -89,6 +99,6 @@ export default defineTool({
       dryRun: config.dryRun,
       runId: runId(ctx),
     });
-    return { facts: patch.facts ?? [], mentions: (patch.mentions ?? []).map((mention) => mention.template), next };
+    return { skipped: null, facts: patch.facts ?? [], mentions: (patch.mentions ?? []).map((mention) => mention.template), next };
   },
 });

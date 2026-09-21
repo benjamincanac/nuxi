@@ -35,11 +35,7 @@ export async function runPipeline(context: TriageContext, options: { signal?: Ab
   if (!plan.escalate && !plan.security) {
     if (classified.next.includes("validate_reproduction")) {
       const reproduction = await validateReproduction(context, signal);
-      plan = mergePlan(plan, "validate_reproduction", {
-        ...reproduction.patch,
-        ...(reproduction.latestVersion ? { latestVersion: reproduction.latestVersion } : {}),
-        ...(reproduction.valid ? { reproduction: reproduction.valid } : {}),
-      });
+      plan = mergePlan(plan, "validate_reproduction", reproduction.patch);
     }
 
     if (classified.next.includes("track_upstream")) {
