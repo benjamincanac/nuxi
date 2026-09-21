@@ -6,7 +6,6 @@
     ":maintainLockFilesWeekly",
     ":semanticCommitTypeAll(chore)"
   ],
-  "rangeStrategy": "bump",
   "minimumReleaseAge": "25 hours",
   "schedule": [
     "on Monday"
@@ -15,6 +14,12 @@
     "pnpmDedupe"
   ],
   "packageRules": [
+    {
+      "description": "The action tracks a major of Node and pnpm, not a patch.",
+      "matchManagers": ["github-actions"],
+      "matchDepTypes": ["uses-with"],
+      "enabled": false
+    },
     {
       "description": "eve runs everything, so it gets its own revertable pull request.",
       "matchPackageNames": ["eve"],
