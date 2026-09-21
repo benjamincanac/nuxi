@@ -86,7 +86,7 @@ It can go once two things are true: eve upgrades stop breaking the agent, and `n
 
 Two config keys are worth a second look at that point. `source` reads areas, releases and the next major branch from another repository, and the playground was the only config that needed it, before it turned it off. If nothing else does, the key goes. `triageMaintainerIssues` was added for seeded issues, but a real repository may still want it, so it probably stays.
 
-Areas get the same look, earlier. They add one Jev question per component to every issue, and their only output is the "Top clusters" field of the weekly digest. If that field goes unread on the first real `nuxt/ui` digests, drop `areas` and `area` from the config. Removing them from the code only makes sense if no repository wants them.
+Areas get the same look. The live `nuxt/ui` config does not declare any, so no repository uses them today. Only the two files in [`examples/`](examples) do, where they add one Jev question per component to every issue for a single output, the "Top clusters" field of the weekly digest. If no repository asks for them, they go from the examples first and from the code after.
 
 ### What stays
 
