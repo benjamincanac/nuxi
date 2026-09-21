@@ -30,7 +30,7 @@ export function referencedIssues(text: string, repo: string): number[] {
 
 export default defineTool({
   description:
-    "Call when a pull request is opened or edited. Finds the issues it closes, plans the `has pr` label on each, and plans a single maintainer mention when a community pull request targets an Enhancement. Returns the issue numbers, call apply_triage with an empty comment on each.",
+    "Call when a pull request is opened or edited. Finds the issues it closes and plans a single maintainer mention when a community pull request targets a request that was never discussed. GitHub already shows the linked pull request on the issue, so nothing is labeled. Returns the issue numbers that got a mention, call apply_triage with an empty comment on each.",
   inputSchema: z.object({
     owner: z.string().min(1),
     repo: z.string().min(1),
@@ -50,13 +50,10 @@ export default defineTool({
       const context = await loadTriageContext(ref, ctx.abortSignal).catch(() => null);
       if (!context || context.issue.isPullRequest || context.issue.state !== "open") continue;
 
-      const mention =
-        community && kindOf(context.issue, context.kinds)?.report === false && (config.dryRun || (await markOnce(ref, "enhancement-pr")))
-          ? [{ template: "enhancement_pr" as const, detail: `${pr.html_url} by @${pr.user?.login ?? "ghost"}.` }]
-          : [];
+      const request = community && kindOf(context.issue, context.kinds)?.report === false;
+      if (!request || !(config.dryRun || (await markOnce(ref, "enhancement-pr")))) continue;
       await updatePlan(runId(ctx), ref, config.dryRun, "link_pull_request", {
-        addLabels: context.issue.labels.includes("has pr") ? [] : ["has pr"],
-        mentions: mention,
+        mentions: [{ template: "enhancement_pr", detail: `${pr.html_url} by @${pr.user?.login ?? "ghost"}.` }],
       });
       issues.push(issueNumber);
     }
