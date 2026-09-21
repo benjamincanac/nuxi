@@ -122,7 +122,8 @@ export async function applyPlan(
 
   const write = !plan.dryRun && actions.blocked === null;
   if (write) {
-    if (actions.setType && !(await setIssueType(plan.issue, actions.setType))) actions.setType = null;
+    // Issue Types belong to the organization. A repository without them, or without this one, keeps the rest of the write.
+    if (actions.setType && !(await setIssueType(plan.issue, actions.setType).catch(() => false))) actions.setType = null;
     // Labels are created on first use, with their color and description. An existing label is never edited.
     for (const label of actions.addedLabels) {
       const style = labelStyle(config, label);
