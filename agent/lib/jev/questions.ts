@@ -41,15 +41,6 @@ export const classifyQuestions = {
     instructions:
       "Is this about accessibility: screen readers, ARIA attributes, keyboard navigation, focus management, contrast or reduced motion?",
   },
-  quality: {
-    type: "score",
-    instructions: "How actionable is this report for a maintainer?",
-    criteria: [
-      "Low: vague, missing versions, no code, hard to understand what is expected.",
-      "Medium: the problem is understandable but details or a reproduction are missing.",
-      "High: clear expected and actual behavior, versions, and code or a reproduction.",
-    ],
-  },
   needs_human: {
     type: "boolean",
     instructions:
