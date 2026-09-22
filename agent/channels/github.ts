@@ -4,7 +4,8 @@ import { z } from "zod";
 
 import { githubConnector, isProduction } from "../config";
 import { isBot, linkedIssues, loadRepoConfig, noteInstallation } from "../lib/github";
-import { enqueue, type QueueItem } from "../lib/store";
+import { SETUP_BRANCH } from "../lib/setup";
+import { enqueue, requestRepoPass, type QueueItem } from "../lib/store";
 
 // The GitHub App slug. `@tia` belongs to a GitHub user, so mentioning it would ping a stranger.
 const BOT_NAME = "hey-tia";
@@ -14,6 +15,11 @@ const pullRequestBody = z.object({
   author_association: z.string().default("NONE"),
   body: z.string().nullable().default(null),
   title: z.string().default(""),
+});
+
+const mergedPullRequest = z.object({
+  merged: z.boolean().default(false),
+  head: z.object({ ref: z.string().default("") }).default({ ref: "" }),
 });
 
 const issueLabels = z.object({
@@ -30,7 +36,12 @@ async function queue(ctx: GitHubInboundContext, item: Omit<QueueItem, "owner" | 
   if (!isProduction()) return null;
   if (isBot(ctx.sender.login, ctx.sender.type)) return null;
   const ref = { owner: ctx.repository.owner, repo: ctx.repository.name };
-  if (!(await loadRepoConfig(ref))) return null;
+  // No config means the repository never got its setup pull request. Asking for one here is what
+  // makes installing the app enough: the daily schedule would otherwise open it up to a day later.
+  if (!(await loadRepoConfig(ref))) {
+    await requestRepoPass(ctx.repository.fullName, "setup");
+    return null;
+  }
   await enqueue({ ...ref, ...item, notBefore: Date.now() });
   return null;
 }
@@ -79,6 +90,15 @@ export default githubChannel({
 
   async onPullRequest(ctx, pullRequest) {
     await seen(ctx);
+    // Merging the setup pull request is the moment a repository becomes tia's, and the only signal
+    // of it: there is no installation hook. It sweeps the backlog instead of waiting for 03:00 UTC.
+    if (pullRequest.action === "closed") {
+      const merged = mergedPullRequest.safeParse(pullRequest.raw);
+      if (isProduction() && merged.success && merged.data.merged && merged.data.head.ref === SETUP_BRANCH) {
+        await requestRepoPass(ctx.repository.fullName, "sweep");
+      }
+      return null;
+    }
     if (pullRequest.action !== "opened" && pullRequest.action !== "edited") return null;
     // Most pull requests have nothing to link. Deciding here keeps a run that would write nothing
     // out of the queue, and its summary out of the approvals channel.

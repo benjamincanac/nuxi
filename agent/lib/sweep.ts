@@ -1,8 +1,9 @@
 import { isEnabled, type RepoConfig } from "../config";
-import { listOpenIssues, listReleases, type Issue } from "./github";
+import { listOpenIssues, listReleases, loadRepoConfig, type Issue } from "./github";
 import { kindOf, loadIntakeLabels, loadIssueKinds, type IssueKind } from "./issue-forms";
+import { openSetupPullRequest } from "./setup";
 import { closedUpstreamPairs } from "./steps/upstream";
-import { alreadyEvaluated, enqueue, getClassified, getLastSeenRelease, setLastSeenRelease, trackUpstreamPair, type Classified, type QueueItem } from "./store";
+import { alreadyEvaluated, enqueue, getClassified, getLastSeenRelease, setLastSeenRelease, takeRepoPasses, trackUpstreamPair, type Classified, type QueueItem } from "./store";
 
 const DAY_MS = 24 * 60 * 60_000;
 /** Labels tia applies that wait on someone. The intake labels of the repository are swept too. */
@@ -105,4 +106,30 @@ export async function sweepRepo(config: RepoConfig, options: { force?: boolean; 
 
   if (newRelease) await setLastSeenRelease(repo, newRelease);
   return { repo, queued, unchanged, newRelease, upstreamClosed: closed.length };
+}
+
+/**
+ * Runs the passes the GitHub webhooks asked for: the first sweep of a repository that just merged
+ * its setup pull request, and the setup pull request of a repository that has none yet. Both are
+ * what the daily schedule would otherwise do up to a day later, which is the whole of the wait
+ * between installing tia and seeing it work.
+ */
+export async function runRepoPasses(): Promise<void> {
+  for (const { repo, pass } of await takeRepoPasses()) {
+    const [owner = "", name = ""] = repo.split("/");
+    try {
+      if (pass === "setup") {
+        const result = await openSetupPullRequest({ owner, repo: name });
+        if (result.status !== "configured" && result.status !== "exists") console.log(`[tia] setup ${repo}`, JSON.stringify(result));
+        continue;
+      }
+      // The config cache still holds the miss from before the merge, so a first sweep can be a few
+      // minutes late. The next pass catches it, and the daily sweep is the backstop either way.
+      const config = await loadRepoConfig({ owner, repo: name });
+      if (config) console.log("[tia] sweep", JSON.stringify(await sweepRepo(config)));
+    } catch (error) {
+      // One repository must not stop the others, nor the queue waiting behind them.
+      console.error(`[tia] ${pass} pass failed on ${repo}`, error);
+    }
+  }
 }

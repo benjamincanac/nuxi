@@ -159,6 +159,7 @@ const DECISIONS_KEY = "tia:decisions";
 const UPSTREAM_KEY = "tia:upstream";
 const INSTALLATIONS_KEY = "tia:installations";
 const QUEUE_KEY = "tia:queue";
+const PENDING_KEY = "tia:pending";
 const MAX_DECISIONS = 5_000;
 const WEEK_SECONDS = 7 * 24 * 60 * 60;
 // Per issue markers outlive any run, not the issue: a year after the last write they are dead weight.
@@ -288,6 +289,28 @@ export async function alreadyEvaluated(ref: IssueRef, fingerprint: string): Prom
   if ((await kv().get<string>(key)) === fingerprint) return true;
   await kv().set(key, fingerprint, YEAR_SECONDS);
   return false;
+}
+
+export type RepoPass = "setup" | "sweep";
+
+/**
+ * A repository pass a webhook noticed but must not run inline: opening a setup pull request or
+ * sweeping a backlog takes far longer than a webhook may. `dispatch_queue` runs it within the minute.
+ * One entry per repository, so repeated webhooks collapse into a single pass.
+ */
+export function requestRepoPass(repo: string, pass: RepoPass): Promise<void> {
+  return kv().hset(PENDING_KEY, repo.toLowerCase(), pass);
+}
+
+/**
+ * Takes the pending passes and clears them. A pass requested between the read and the delete is
+ * dropped, which costs it a day at worst: the daily sweep does the same work.
+ */
+export async function takeRepoPasses(): Promise<{ repo: string; pass: RepoPass }[]> {
+  const stored = await kv().hgetall<RepoPass>(PENDING_KEY);
+  const entries = Object.entries(stored);
+  if (entries.length) await kv().del(PENDING_KEY);
+  return entries.map(([repo, pass]) => ({ repo, pass }));
 }
 
 export function enqueue(item: QueueItem): Promise<void> {
