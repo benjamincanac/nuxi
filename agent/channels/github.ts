@@ -3,12 +3,18 @@ import { githubChannel, type GitHubInboundContext } from "eve/channels/github";
 import { z } from "zod";
 
 import { githubConnector, isProduction } from "../config";
-import { isBot, loadRepoConfig, noteInstallation } from "../lib/github";
+import { isBot, linkedIssues, loadRepoConfig, noteInstallation } from "../lib/github";
 import { enqueue, type QueueItem } from "../lib/store";
 
 // The GitHub App slug. `@tia` belongs to a GitHub user, so mentioning it would ping a stranger.
 const BOT_NAME = "hey-tia";
 const MENTION = new RegExp(`(^|\\s)@${BOT_NAME}\\b`, "i");
+
+const pullRequestBody = z.object({
+  author_association: z.string().default("NONE"),
+  body: z.string().nullable().default(null),
+  title: z.string().default(""),
+});
 
 const issueLabels = z.object({
   labels: z.array(z.union([z.string(), z.object({ name: z.string() })])),
@@ -74,6 +80,10 @@ export default githubChannel({
   async onPullRequest(ctx, pullRequest) {
     await seen(ctx);
     if (pullRequest.action !== "opened" && pullRequest.action !== "edited") return null;
+    // Most pull requests have nothing to link. Deciding here keeps a run that would write nothing
+    // out of the queue, and its summary out of the approvals channel.
+    const pr = pullRequestBody.safeParse(pullRequest.raw);
+    if (!pr.success || !linkedIssues(pr.data, ctx.repository.fullName).length) return null;
     return queue(ctx, { issueNumber: pullRequest.pullRequestNumber, reason: "pull_request" });
   },
 
