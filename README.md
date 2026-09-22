@@ -51,7 +51,7 @@ Global settings are environment variables, listed in [`.env.example`](.env.examp
 
 When the app is installed on a repository without the file, tia opens one pull request from a `tia/setup` branch. It contains a config detected from the repository and removes the workflows tia replaces: `Hebilicious/reproduire`, and `actions/stale` jobs that only target tia's labels. Closing the PR is a final no.
 
-There is no install webhook, so the daily sweep opens it. `POST /ops/setup/trigger` opens it right away, and `pnpm propose-setup <owner/repo>` previews it.
+There is no install webhook, so the first webhook a repository sends asks for it and it opens within the minute. The daily sweep is the backstop. `POST /ops/setup/trigger` opens it on demand, and `pnpm propose-setup <owner/repo>` previews it.
 
 ## Labels
 

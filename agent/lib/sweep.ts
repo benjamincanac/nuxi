@@ -39,6 +39,8 @@ export interface SweepSummary {
   repo: string;
   queued: number;
   unchanged: number;
+  /** Left for the next sweep by `limit`. */
+  deferred: number;
   newRelease: string | null;
   upstreamClosed: number;
 }
@@ -74,9 +76,18 @@ export async function sweepRepo(config: RepoConfig, options: { force?: boolean; 
   const newRelease = latest !== null && latest !== lastSeen ? latest : null;
   const base: Pick<QueueItem, "owner" | "repo" | "explicit"> = { owner: config.owner, repo: config.repo, explicit: options.explicit };
 
+  // `limit` caps what is queued, not what is considered. An unchanged issue costs nothing, so it
+  // must not use up the budget, or a limited sweep over a quiet backlog would queue nothing at all.
+  // What is left is never fingerprinted, so the next sweep starts where this one stopped.
+  const limit = options.limit ?? issues.length;
   let queued = 0;
   let unchanged = 0;
-  for (const issue of issues.slice(0, options.limit ?? issues.length)) {
+  let deferred = 0;
+  for (const [index, issue] of issues.entries()) {
+    if (queued >= limit) {
+      deferred = issues.length - index;
+      break;
+    }
     // The release is deliberately not part of the fingerprint. It changes whether the issue is
     // fixed, nothing about the issue itself, so a publish must not re-triage the whole backlog.
     const fingerprint = `${issue.updatedAt}:${thresholdsCrossed(issue, config)}`;
@@ -105,7 +116,7 @@ export async function sweepRepo(config: RepoConfig, options: { force?: boolean; 
   }
 
   if (newRelease) await setLastSeenRelease(repo, newRelease);
-  return { repo, queued, unchanged, newRelease, upstreamClosed: closed.length };
+  return { repo, queued, unchanged, deferred, newRelease, upstreamClosed: closed.length };
 }
 
 /**
