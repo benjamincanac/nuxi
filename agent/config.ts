@@ -101,8 +101,10 @@ export const repoConfigSchema = z.strictObject({
       followUpDays: z.number().int().positive().default(14),
       mentionDays: z.number().int().positive().default(30),
       staleDays: z.number().int().positive().default(60),
+      /** A sweep runs once a day, so this is also how many approvals a backlog can ask for in one. */
+      maxPerDay: z.number().int().positive().default(10),
     })
-    .default({ followUpDays: 14, mentionDays: 30, staleDays: 60 }),
+    .default({ followUpDays: 14, mentionDays: 30, staleDays: 60, maxPerDay: 10 }),
   discord: z
     .strictObject({
       digestChannel: z.string().default(""),

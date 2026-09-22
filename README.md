@@ -51,7 +51,7 @@ Global settings are environment variables, listed in [`.env.example`](.env.examp
 
 When the app is installed on a repository without the file, tia opens one pull request from a `tia/setup` branch. It contains a config detected from the repository and removes the workflows tia replaces: `Hebilicious/reproduire`, and `actions/stale` jobs that only target tia's labels. Closing the PR is a final no.
 
-There is no install webhook, so the daily sweep opens it. `POST /ops/setup/trigger` opens it right away, and `pnpm propose-setup <owner/repo>` previews it.
+There is no install webhook, so the first webhook a repository sends asks for it and it opens within the minute. The daily sweep is the backstop. `POST /ops/setup/trigger` opens it on demand, and `pnpm propose-setup <owner/repo>` previews it.
 
 ## Labels
 
@@ -77,7 +77,7 @@ The kind of issue is read from the forms too. Each form says how the repository 
 | | When | What |
 | --- | --- | --- |
 | `dispatch_queue` | every minute | Starts up to 5 queued sessions |
-| `daily_sweep` | 03:00 UTC | Re-evaluates waiting issues, follows up on `needs reproduction` at 14 days and mentions maintainers at 30, re-checks open reports for a fix when a release is published, picks up closed upstream issues and new installs |
+| `daily_sweep` | 03:00 UTC | Re-evaluates waiting issues, follows up on `needs reproduction` at 14 days and mentions maintainers at 30, re-checks open reports for a fix when a release is published, picks up closed upstream issues and new installs. Queues at most `sweep.maxPerDay` issues, 10 by default, so a backlog it has never seen is worked through over days rather than in one morning |
 | `weekly_digest` | Monday 09:00 Paris | One Discord message per repository |
 
 `POST /ops/<triage|sweep|backfill|digest|setup|check>/trigger` and `GET /ops/decisions` are protected by `INTERNAL_API_SECRET`. A preview deployment never writes unless the request carries `"write": true` and approvals are off for Preview with `TIA_REQUIRE_APPROVAL=false`.
