@@ -425,7 +425,7 @@ export async function repositoryId(ref: RepoRef, signal?: AbortSignal): Promise<
   return id;
 }
 
-const CLOSING_REFERENCE = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+(?:https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/issues\/|#)(\d+)/gi;
+const CLOSING_REFERENCE = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+(?:https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/issues\/|([\w.-]+\/[\w.-]+)?#)(\d+)/gi;
 
 export interface PullRequestBody {
   author_association: string;
@@ -442,8 +442,11 @@ export function linkedIssues(pr: PullRequestBody, fullName: string): number[] {
   if (["COLLABORATOR", "MEMBER", "OWNER"].includes(pr.author_association)) return [];
   const numbers = new Set<number>();
   for (const match of `${pr.title}\n${pr.body ?? ""}`.matchAll(CLOSING_REFERENCE)) {
-    if (match[1] && match[1].toLowerCase() !== fullName.toLowerCase()) continue;
-    numbers.add(Number(match[2]));
+    // A closing reference can name its repository, as a URL or as `owner/repo#1`. Another one is not ours.
+    const named = match[1] ?? match[2];
+    if (named && named.toLowerCase() !== fullName.toLowerCase()) continue;
+    const issueNumber = Number(match[3]);
+    if (Number.isSafeInteger(issueNumber) && issueNumber > 0) numbers.add(issueNumber);
   }
   return [...numbers];
 }
