@@ -43,15 +43,28 @@ export interface SweepSummary {
 }
 
 /**
- * Queues every issue with an intake label, `needs reproduction` or `needs verification` that changed
- * or crossed a follow-up threshold, as a `sweep`. An issue that did neither but may be affected by a
- * release published since the last sweep is queued as a `release`, which only re-checks the fix.
+ * The issues a sweep considers: the repository's intake labels, plus the ones tia waits on.
+ * A repository whose issue forms share no label has no intake label at all, and there an open issue
+ * carrying no label is what waiting for triage looks like. Where the repository does have one,
+ * an unlabeled issue is the opposite: a maintainer removed the intake label, which is how a
+ * decision is recorded, so it is left alone.
+ */
+async function listSweepable(config: RepoConfig, intakeLabels: readonly string[]): Promise<Issue[]> {
+  if (intakeLabels.length) return listOpenIssues(config, [...intakeLabels, ...SWEEP_LABELS]);
+  const issues = await listOpenIssues(config);
+  return issues.filter((issue) => issue.labels.length === 0 || issue.labels.some((label) => SWEEP_LABELS.includes(label)));
+}
+
+/**
+ * Queues every sweepable issue that changed or crossed a follow-up threshold, as a `sweep`. An
+ * issue that did neither but may be affected by a release published since the last sweep is queued
+ * as a `release`, which only re-checks the fix.
  */
 export async function sweepRepo(config: RepoConfig, options: { force?: boolean; limit?: number; explicit?: boolean; stagger?: boolean } = {}): Promise<SweepSummary> {
   const repo = `${config.owner}/${config.repo}`;
   const [intakeLabels, kinds] = await Promise.all([loadIntakeLabels(config), loadIssueKinds(config)]);
   const [issues, releases, lastSeen] = await Promise.all([
-    listOpenIssues(config, [...intakeLabels, ...SWEEP_LABELS]),
+    listSweepable(config, intakeLabels),
     listReleases(config),
     getLastSeenRelease(repo),
   ]);
