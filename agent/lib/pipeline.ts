@@ -20,6 +20,7 @@ export interface PipelineResult {
  * Used by the local backfill, which has no model to write comments.
  */
 export async function runPipeline(context: TriageContext, options: { signal?: AbortSignal } = {}): Promise<PipelineResult> {
+  context = { ...context, dryRun: true };
   const { config, issue } = context;
   const { signal } = options;
   let plan = emptyPlan(issue, "backfill", true);

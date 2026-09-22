@@ -26,7 +26,6 @@ classify_issue ─▶ track_upstream ─▶ validate_reproduction
 Each repository owns its config in `.github/tia.yml`. A repository without a valid file is ignored. Only `maintainers` is required.
 
 ```yaml
-dryRun: true                  # default. Log what would be done, write nothing.
 maintainers: [benjamincanac]  # mentioned for decisions, their own issues are skipped
 
 upstreams: [unovue/reka-ui]   # root cause candidates, labeled `upstream/<repo>`
@@ -50,7 +49,7 @@ Global settings are environment variables, listed in [`.env.example`](.env.examp
 
 ## Setup pull request
 
-When the app is installed on a repository without the file, tia opens one pull request from a `tia/setup` branch. It contains a config detected from the repository, with `dryRun: true`, and removes the workflows tia replaces: `Hebilicious/reproduire`, and `actions/stale` jobs that only target tia's labels. Closing the PR is a final no.
+When the app is installed on a repository without the file, tia opens one pull request from a `tia/setup` branch. It contains a config detected from the repository and removes the workflows tia replaces: `Hebilicious/reproduire`, and `actions/stale` jobs that only target tia's labels. Closing the PR is a final no.
 
 There is no install webhook, so the daily sweep opens it. `POST /ops/setup/trigger` opens it right away, and `pnpm propose-setup <owner/repo>` previews it.
 

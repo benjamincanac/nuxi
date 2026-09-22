@@ -45,7 +45,6 @@ const thresholdsSchema = z
 const repoSlug = z.string().regex(/^[\w.-]+\/[\w.-]+$/, "Expected owner/repo");
 
 export const repoConfigSchema = z.strictObject({
-  dryRun: z.boolean().default(true),
   maintainers: z.array(z.string().min(1)).min(1),
   /** Issues authored by a maintainer are skipped. Turn on for a playground seeded from your own account. */
   triageMaintainerIssues: z.boolean().default(false),

@@ -138,7 +138,7 @@ curl -X POST $TIA_URL/ops/triage/trigger \
   -H "authorization: Bearer $INTERNAL_API_SECRET" -H "content-type: application/json" \
   -d '{ "repo": "<you>/tia-playground", "issueNumber": 1 }'
 
-# Check: one JSON line per step, ending with `apply`, "dryRun": true and the intended actions.
+# Check: one JSON line per step, ending with `apply` and the intended actions. "dryRun": true, previews never write.
 curl "$TIA_URL/ops/decisions?repo=<you>/tia-playground" -H "authorization: Bearer $INTERNAL_API_SECRET"
 ```
 
@@ -244,11 +244,10 @@ curl -X POST https://<production-url>/ops/setup/trigger \
   -d '{ "repo": "<owner>/<repo>", "write": true }'
 ```
 
-1. Review the pull request and fix what its "To check" section lists. It starts with `dryRun: true`. Closing it is a final no, tia never opens it again.
+1. Review the pull request and fix what its "To check" section lists. Closing it is a final no, tia never opens it again.
 2. Merge. The repository is picked up within 5 minutes.
-3. Let it run dry for a few days, then adjust `thresholds` in the repository's file.
-4. Set `dryRun: false`. Writes still wait for your approval in Discord.
-5. When you trust it, set `TIA_REQUIRE_APPROVAL=false` and redeploy.
+3. Every write waits for your approval in Discord. Approve or cancel for a few days, then adjust `thresholds` in the repository's file.
+4. When you trust it, set `TIA_REQUIRE_APPROVAL=false` and redeploy.
 
 ```sh
 # What it decided while dry
@@ -264,7 +263,7 @@ pnpm backfill <owner>/<repo> --url https://<production-url>
 | Symptom | Cause |
 | --- | --- |
 | Nothing happens after opening an issue | No valid `.github/tia.yml` on the default branch, check with `pnpm validate-config`. Or the connector was created without the `issues` event. |
-| `"dryRun": true` though the file says `false` | No approvals channel is set, or the run came from a preview. |
+| `"dryRun": true` in the decision log | No approvals channel is set, or the run came from a preview or a backfill. |
 | `/ask` answers nothing | Your id is not in `DISCORD_MAINTAINER_IDS`. |
 | Approve does nothing | The session expired. Runs park for 10 minutes. Trigger the issue again. |
 | `tia didn't respond in time` on Approve | The application's Interactions Endpoint URL is empty. Editing the application in Discord's portal clears it. Set it back to the connector's trigger URL, `https://connect.vercel.com/trigger/<connector id>`. |

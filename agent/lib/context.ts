@@ -86,6 +86,8 @@ export type Fixture = z.output<typeof fixtureSchema>;
 
 export interface TriageContext {
   config: RepoConfig;
+  /** This run must not write: a backfill, a preview deployment or a fixture. The repository config has no say. */
+  dryRun: boolean;
   issue: Issue;
   areas: Area[];
   /** Where reproductions start from, read from the repo's issue forms. */
@@ -103,10 +105,11 @@ export interface TriageContext {
 async function loadFixture(ref: IssueRef): Promise<TriageContext> {
   const path = join(process.cwd(), "evals", "data", `${ref.repo}.json`);
   const fixture = fixtureSchema.parse(JSON.parse(await readFile(path, "utf8")));
-  // Fixtures never write, whatever their config says.
-  const config = { ...resolveRepoConfig(ref.owner, ref.repo, fixture.config), dryRun: true };
+  const config = resolveRepoConfig(ref.owner, ref.repo, fixture.config);
   return {
     config,
+    // Fixtures never write.
+    dryRun: true,
     issue: {
       ...ref,
       ...fixture.issue,
@@ -176,6 +179,7 @@ export async function loadTriageContext(
     lastHumanActivity: humanTimes.length ? Math.max(...humanTimes) : null,
     pinned: pinned.includes(ref.issueNumber),
     fixture: null,
+    dryRun: false,
   };
 }
 

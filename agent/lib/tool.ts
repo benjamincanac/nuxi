@@ -22,7 +22,7 @@ export function runId(ctx: { session: { id: string; turn: { id: string } } }): s
 export async function requireContext(ref: IssueRef, signal?: AbortSignal): Promise<TriageContext> {
   const context = await loadTriageContext(ref, signal);
   if (!context) throw new Error(`Triage is disabled for ${ref.owner}/${ref.repo}: no valid .github/tia.yml.`);
-  if (!context.config.dryRun && (await isDryRunForced(ref))) context.config = { ...context.config, dryRun: true };
+  if (await isDryRunForced(ref)) context.dryRun = true;
   return context;
 }
 
@@ -45,7 +45,7 @@ export async function writeApproval<T>({ toolInput }: ApprovalContext<T>): Promi
   if (input.data.owner === FIXTURE_OWNER) return "not-applicable";
   const config = await loadRepoConfig(input.data);
   if (!config) return { type: "denied", reason: "Triage is disabled for this repository." };
-  if (config.dryRun || (await isDryRunForced(input.data))) return "not-applicable";
+  if (await isDryRunForced(input.data)) return "not-applicable";
   // A sweep asks about every open issue and most of them need nothing. Asking a maintainer to
   // approve a run that writes nothing is the fastest way to teach them to approve without reading.
   // An escalated or skipped plan is blocked in `applyPlan`, so it never writes either.

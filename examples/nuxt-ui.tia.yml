@@ -1,5 +1,4 @@
 # .github/tia.yml for nuxt/ui
-dryRun: true
 maintainers: [benjamincanac]
 areas:
   - kind: component

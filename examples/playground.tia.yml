@@ -1,5 +1,4 @@
 # .github/tia.yml for the playground repo
-dryRun: false
 maintainers: [benjamincanac]
 # Seeded issues are created by your own account. Without this they would all be skipped.
 triageMaintainerIssues: true

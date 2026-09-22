@@ -147,7 +147,7 @@ export async function proposeSetup(ref: RepoRef, signal?: AbortSignal): Promise<
   const labelNames = labels.map((label) => label.name);
   const notes: string[] = [];
 
-  const config: RepoConfigInput = { dryRun: true, maintainers: await detectMaintainers(ref, paths, repo.owner, signal) };
+  const config: RepoConfigInput = { maintainers: await detectMaintainers(ref, paths, repo.owner, signal) };
   if (config.maintainers.length === 0) {
     config.maintainers = [repo.owner.login];
     notes.push("`maintainers` could not be detected. Replace the placeholder with the people to mention.");
@@ -228,11 +228,11 @@ export function setupPullRequestBody(proposal: SetupProposal, manual: WorkflowFi
   const lines = [
     "This adds the [tia](https://github.com/benjamincanac/tia) triage config for this repository. Everything in it was detected from the repository, review it like any other config file.",
     "",
-    "`dryRun: true` means tia logs what it would do and writes nothing. Set it to `false` when the decisions look right. It never closes, transfers or converts an issue, and never removes a label a human applied.",
+    "Every write waits for a maintainer's approval in Discord. tia never closes, transfers or converts an issue, and never removes a label a human applied.",
   ];
   if (proposal.notes.length) lines.push("", "### To check", "", ...proposal.notes.map((note) => `- ${note}`));
   if (removed.length) {
-    lines.push("", "### Removed automation", "", "These overlap with what tia does. They are removed in the same PR, so merge it when you are ready to switch `dryRun` off, or drop the deletions from this branch to keep them for now.", "", "| File | Why |", "| --- | --- |", ...removed.map((finding) => `| \`${finding.path}\` | ${finding.reason} |`));
+    lines.push("", "### Removed automation", "", "These overlap with what tia does. They are removed in the same PR, so merge it when you are ready to let tia take over, or drop the deletions from this branch to keep them for now.", "", "| File | Why |", "| --- | --- |", ...removed.map((finding) => `| \`${finding.path}\` | ${finding.reason} |`));
   }
   if (manual.length) {
     lines.push("", "### To remove by hand", "", "The app has no permission to edit workflow files here, so these were left in place.", "", "| File | Why |", "| --- | --- |", ...manual.map((finding) => `| \`${finding.path}\` | ${finding.reason} |`));

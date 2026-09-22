@@ -87,7 +87,7 @@ export async function sweepRepo(config: RepoConfig, options: { force?: boolean; 
       text: `${pair.upstreamUrl} is closed.`,
       notBefore: Date.now(),
     });
-    if (!config.dryRun) await trackUpstreamPair({ ...pair, notifiedClosed: true });
+    await trackUpstreamPair({ ...pair, notifiedClosed: true });
   }
 
   if (newRelease) await setLastSeenRelease(repo, newRelease);

@@ -33,7 +33,7 @@ const mentionQuestions = {
  */
 export function triagePrompt(item: QueueItem, config: RepoConfig, triageRequested: boolean): string {
   const ref = `owner "${item.owner}", repo "${item.repo}", issueNumber ${item.issueNumber}`;
-  const mode = config.dryRun || item.dryRun ? "The repository is in dry-run: run the full pipeline, apply_triage only logs." : "";
+  const mode = item.dryRun ? "This is a dry run: run the full pipeline, apply_triage only logs." : "";
   const tail = `Load the triage skill and follow it. ${mode}`.trim();
   switch (item.reason) {
     case "pull_request":
@@ -123,7 +123,7 @@ export async function dispatch(to: ScheduleToFn, auth: Auth, item: QueueItem): P
   if (item.explicit) await allowPreviewWrite(item);
 
   const approvals = config.discord.approvalsChannel;
-  const needsApproval = !config.dryRun && !item.dryRun && requireApproval();
+  const needsApproval = !item.dryRun && requireApproval();
   if (item.dryRun) await forceDryRun(item);
   if (needsApproval && !approvals) {
     // On the GitHub channel an approval prompt would be posted as a public comment. Never do that.
@@ -137,7 +137,7 @@ export async function dispatch(to: ScheduleToFn, auth: Auth, item: QueueItem): P
       : false;
   // "I only triage issues" is said once per issue, however many times the bot is pinged.
   // Dry runs post nothing, so they do not consume the marker.
-  const writes = !config.dryRun && !item.dryRun;
+  const writes = !item.dryRun;
   if (item.reason === "mention" && !triageRequested && writes && !(await markOnce(item, "mention-refusal"))) return "skipped";
   const message = triagePrompt(item, config, triageRequested);
 

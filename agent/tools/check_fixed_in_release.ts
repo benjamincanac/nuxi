@@ -17,7 +17,7 @@ export default defineTool({
     const areaSlugs = knownAreas(context, [...(plan?.areas ?? []), ...((await getClassified(ref))?.areas ?? [])]);
 
     const outcome = await checkFixedInRelease(context, areaSlugs, ctx.abortSignal);
-    await updatePlan(runId(ctx), ref, context.config.dryRun, "check_fixed_in_release", outcome.patch);
+    await updatePlan(runId(ctx), ref, context.dryRun, "check_fixed_in_release", outcome.patch);
     await recordDecision({
       at: new Date().toISOString(),
       repo: `${ref.owner}/${ref.repo}`,
@@ -25,7 +25,7 @@ export default defineTool({
       step: "fixed",
       answers: outcome.answers,
       actions: outcome.patch,
-      dryRun: context.config.dryRun,
+      dryRun: context.dryRun,
       runId: runId(ctx),
     });
     return {

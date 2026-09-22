@@ -25,7 +25,7 @@ export default defineTool({
     const comment = reporterText(recorded, written);
     // Without a plan no tool evaluated the skip rules for this run, so they are evaluated here.
     // The activity guard is off: this path answers an explicit @-mention.
-    const plan = recorded ?? { ...emptyPlan(ref, runId(ctx), context.config.dryRun), skipped: skipReason(context, true) };
+    const plan = recorded ?? { ...emptyPlan(ref, runId(ctx), context.dryRun), skipped: skipReason(context, true) };
 
     if (!plan.escalate && !plan.skipped && !hasWrites(plan) && !comment.trim()) {
       return { applied: false, reason: "Nothing to do: no decision was taken, the issue stays in triage." };

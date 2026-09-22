@@ -13,7 +13,7 @@ export default defineTool({
   async execute(ref, ctx) {
     const context = await requireContext(ref, ctx.abortSignal);
     const outcome = await checkDuplicate(context, ctx.abortSignal);
-    await updatePlan(runId(ctx), ref, context.config.dryRun, "check_duplicate", outcome.patch);
+    await updatePlan(runId(ctx), ref, context.dryRun, "check_duplicate", outcome.patch);
     await recordDecision({
       at: new Date().toISOString(),
       repo: `${ref.owner}/${ref.repo}`,
@@ -21,7 +21,7 @@ export default defineTool({
       step: "duplicate",
       answers: outcome.answers,
       actions: outcome.patch,
-      dryRun: context.config.dryRun,
+      dryRun: context.dryRun,
       runId: runId(ctx),
     });
     return {

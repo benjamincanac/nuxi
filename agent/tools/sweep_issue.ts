@@ -33,13 +33,13 @@ export default defineTool({
     // human since, and a pass that never reaches `classify_issue` has no other place to notice.
     const skipped = skipReason(context, false);
     if (skipped) {
-      await updatePlan(runId(ctx), ref, config.dryRun, "sweep_issue", { skipped });
+      await updatePlan(runId(ctx), ref, context.dryRun, "sweep_issue", { skipped });
       return { skipped, facts: [] as string[], mentions: [] as string[], next: [] as string[] };
     }
 
     const { followUpDays, mentionDays, staleDays } = config.sweep;
     // Dry runs never consume the once-only markers.
-    const once = (marker: string) => (config.dryRun ? Promise.resolve(true) : markOnce(ref, marker));
+    const once = (marker: string) => (context.dryRun ? Promise.resolve(true) : markOnce(ref, marker));
 
     const timeline = await getTimeline(ref, ctx.abortSignal);
     const labeledAt = (label: string) =>
@@ -88,7 +88,7 @@ export default defineTool({
       next = ["classify_issue"];
     }
 
-    await updatePlan(runId(ctx), ref, config.dryRun, "sweep_issue", patch);
+    await updatePlan(runId(ctx), ref, context.dryRun, "sweep_issue", patch);
     await recordDecision({
       at: new Date().toISOString(),
       repo: `${ref.owner}/${ref.repo}`,
@@ -96,7 +96,7 @@ export default defineTool({
       step: "sweep",
       answers,
       actions: patch,
-      dryRun: config.dryRun,
+      dryRun: context.dryRun,
       runId: runId(ctx),
     });
     return { skipped: null, facts: patch.facts ?? [], mentions: (patch.mentions ?? []).map((mention) => mention.template), next };

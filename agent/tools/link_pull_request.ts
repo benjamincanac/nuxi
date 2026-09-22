@@ -51,8 +51,8 @@ export default defineTool({
       if (!context || context.issue.isPullRequest || context.issue.state !== "open") continue;
 
       const request = community && kindOf(context.issue, context.kinds)?.report === false;
-      if (!request || !(config.dryRun || (await markOnce(ref, "enhancement-pr")))) continue;
-      await updatePlan(runId(ctx), ref, config.dryRun, "link_pull_request", {
+      if (!request || !(context.dryRun || (await markOnce(ref, "enhancement-pr")))) continue;
+      await updatePlan(runId(ctx), ref, context.dryRun, "link_pull_request", {
         mentions: [{ template: "enhancement_pr", detail: `${pr.html_url} by @${pr.user?.login ?? "ghost"}.` }],
       });
       issues.push(issueNumber);

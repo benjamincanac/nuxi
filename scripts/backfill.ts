@@ -112,7 +112,6 @@ async function local(): Promise<Row[]> {
     config = await loadRepoConfig({ owner, repo });
   }
   if (!config) throw new Error(`${slug} has no valid .github/tia.yml. Pass --config to use a local file.`);
-  config = { ...config, dryRun: true };
 
   const issues = (await listOpenIssues(config)).slice(0, limit);
   const rows: Row[] = [];

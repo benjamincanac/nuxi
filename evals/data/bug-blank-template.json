@@ -1,6 +1,5 @@
 {
   "config": {
-    "dryRun": true,
     "maintainers": [
       "maintainer"
     ],

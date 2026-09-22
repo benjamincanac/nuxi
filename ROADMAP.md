@@ -71,7 +71,7 @@ The playground is a test bench, not a part of tia. It is the only repository whe
 
 Since the issue kinds are read from the issue forms, it runs in label mode on purpose: two forms of its own that mark a bug with `bug` and a request with `enhancement`, no Issue Type, and `source` turned off so those forms are the ones read. `nuxt/ui` covers the Issue Type path, so the playground is the only place that covers this one. Areas are empty there as a result, and the seeded issues no longer count as waiting for triage.
 
-It can go once two things are true: eve upgrades stop breaking the agent, and `nuxt/ui` runs with `dryRun: false`, which puts the same chain under real traffic.
+It can go once two things are true: eve upgrades stop breaking the agent, and `nuxt/ui` runs with approvals, which puts the same chain under real traffic.
 
 ### What goes with it
 

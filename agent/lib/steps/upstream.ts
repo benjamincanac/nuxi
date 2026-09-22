@@ -33,7 +33,7 @@ export async function trackUpstream(context: TriageContext, upstream: string, si
     choiceConfidence(answers.duplicate_of) >= config.thresholds.labels;
   if (!confident || !match) return { answers, upstream, match: null, patch: {} };
 
-  if (!context.fixture && !config.dryRun) {
+  if (!context.dryRun) {
     await trackUpstreamPair({
       repo: `${issue.owner}/${issue.repo}`,
       issueNumber: issue.issueNumber,

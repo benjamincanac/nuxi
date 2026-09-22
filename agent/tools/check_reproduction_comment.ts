@@ -28,7 +28,7 @@ export default defineTool({
       ? { removeLabels: ["needs reproduction"], facts: [`Thank @${comment.author} for the reproduction.`] }
       : {};
 
-    await updatePlan(runId(ctx), ref, context.config.dryRun, "check_reproduction_comment", patch);
+    await updatePlan(runId(ctx), ref, context.dryRun, "check_reproduction_comment", patch);
     await recordDecision({
       at: new Date().toISOString(),
       repo: `${ref.owner}/${ref.repo}`,
@@ -36,7 +36,7 @@ export default defineTool({
       step: "reproduction_comment",
       answers,
       actions: patch,
-      dryRun: context.config.dryRun,
+      dryRun: context.dryRun,
       runId: runId(ctx),
     });
     return { hasReproduction, next: hasReproduction ? ["classify_issue"] : [] };

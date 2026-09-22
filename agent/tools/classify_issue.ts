@@ -20,12 +20,12 @@ export default defineTool({
 
     const skipped = skipReason(context, force);
     if (skipped) {
-      await updatePlan(run, ref, context.config.dryRun, "classify", { skipped });
+      await updatePlan(run, ref, context.dryRun, "classify", { skipped });
       return { skipped, next: [] as string[] };
     }
 
     const outcome = await classify(context, ctx.abortSignal);
-    const plan = await updatePlan(run, ref, context.config.dryRun, "classify", { ...outcome.patch, ...(outcome.type ? { type: outcome.type } : {}) });
+    const plan = await updatePlan(run, ref, context.dryRun, "classify", { ...outcome.patch, ...(outcome.type ? { type: outcome.type } : {}) });
     // Kept for the release passes, which re-check the fix without classifying again.
     await rememberClassified(ref, { releaseCheck: outcome.report && !plan.escalate && !plan.security, areas: plan.areas });
     await recordDecision({
@@ -35,13 +35,13 @@ export default defineTool({
       step: "classify",
       answers: outcome.answers,
       actions: outcome.patch,
-      dryRun: context.config.dryRun,
+      dryRun: context.dryRun,
       runId: run,
     });
 
     return {
       skipped: null,
-      dryRun: context.config.dryRun,
+      dryRun: context.dryRun,
       escalate: plan.escalate,
       security: plan.security,
       type: outcome.type,

@@ -193,7 +193,7 @@ export async function validateReproduction(context: TriageContext, signal?: Abor
   } else if (valid && latestVersion && isBehind(valid.version ?? reported ?? latestVersion, latestVersion)) {
     const version = valid.version ?? reported;
     // Asked once. The sweep would otherwise repeat it on every run.
-    const first = fixture || config.dryRun ? true : await markOnce(issue, "retest-on-latest");
+    const first = context.dryRun ? true : await markOnce(issue, "retest-on-latest");
     if (first) {
       patch.facts = [
         `The ${valid.version ? "reproduction uses" : "report is on"} ${config.package?.name} ${version}, the latest is ${latestVersion}. Ask the reporter to retest on the latest version first.`,

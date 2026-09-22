@@ -16,7 +16,7 @@ export default defineTool({
   label: { start: ({ template }) => `Plan maintainer mention: ${template}` },
   async execute({ template, detail, ...ref }, ctx) {
     const context = await requireContext(ref, ctx.abortSignal);
-    const plan = await updatePlan(runId(ctx), ref, context.config.dryRun, "mention_maintainers", {
+    const plan = await updatePlan(runId(ctx), ref, context.dryRun, "mention_maintainers", {
       mentions: [{ template, detail }],
     });
     return { mentions: plan.mentions.map((mention) => mention.template) };

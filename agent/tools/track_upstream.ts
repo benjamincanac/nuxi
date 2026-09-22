@@ -20,7 +20,7 @@ export default defineTool({
     if (!slug) throw new Error(`${upstream} is not a configured upstream. Configured: ${context.config.upstreams.join(", ")}`);
 
     const outcome = await trackUpstream(context, slug, ctx.abortSignal);
-    await updatePlan(runId(ctx), ref, context.config.dryRun, "track_upstream", outcome.patch);
+    await updatePlan(runId(ctx), ref, context.dryRun, "track_upstream", outcome.patch);
     await recordDecision({
       at: new Date().toISOString(),
       repo: `${ref.owner}/${ref.repo}`,
@@ -28,7 +28,7 @@ export default defineTool({
       step: "upstream",
       answers: outcome.answers,
       actions: outcome.patch,
-      dryRun: context.config.dryRun,
+      dryRun: context.dryRun,
       runId: runId(ctx),
     });
     return { upstream: slug, upstreamIssue: outcome.match?.url ?? null, facts: outcome.patch.facts ?? [] };
