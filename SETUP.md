@@ -120,7 +120,7 @@ pnpm run deploy
 
 ## 6. Add a repository
 
-Install the app on it. The daily sweep opens a setup pull request at 03:00 UTC, unless the app is installed on more than 10 repositories or `TIA_AUTO_SETUP=false`. To skip the wait:
+Install the app on it. The setup pull request opens within a minute of the repository's first issue or pull request activity, and at 03:00 UTC otherwise, unless the app is installed on more than 10 repositories or `TIA_AUTO_SETUP=false`. To ask for it right away:
 
 ```sh
 export TIA_URL=https://<production-url>
@@ -135,7 +135,7 @@ curl -X POST $TIA_URL/ops/setup/trigger \
 `pnpm propose-setup <owner>/<repo>` prints the same thing from your machine.
 
 1. Review the pull request and fix what its "To check" section lists. Closing it is a final no, tia never opens it again.
-2. Merge. The repository is picked up within 5 minutes.
+2. Merge. tia picks the repository up and sweeps its open backlog within a few minutes.
 3. Open an issue without a reproduction. Within a minute or two Discord shows an Approve prompt with what it would write. Approve, and the issue gets `needs reproduction`, loses the label its issue forms apply, and receives one comment.
 4. Reply with a repository link. tia removes the label and runs again.
 5. Comment `@hey-tia can you triage this again?` on another issue.
