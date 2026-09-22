@@ -425,6 +425,32 @@ export async function repositoryId(ref: RepoRef, signal?: AbortSignal): Promise<
   return id;
 }
 
+const CLOSING_REFERENCE = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+(?:https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/issues\/|([\w.-]+\/[\w.-]+)?#)(\d+)/gi;
+
+export interface PullRequestBody {
+  author_association: string;
+  body: string | null;
+  title: string;
+}
+
+/**
+ * The issues a pull request closes in its own repository. Empty when a maintainer opened it: the
+ * only thing tia does with a pull request is warn about a community one on an undiscussed request.
+ * The webhook decides with this too, so a pull request with nothing to link never starts a run.
+ */
+export function linkedIssues(pr: PullRequestBody, fullName: string): number[] {
+  if (["COLLABORATOR", "MEMBER", "OWNER"].includes(pr.author_association)) return [];
+  const numbers = new Set<number>();
+  for (const match of `${pr.title}\n${pr.body ?? ""}`.matchAll(CLOSING_REFERENCE)) {
+    // A closing reference can name its repository, as a URL or as `owner/repo#1`. Another one is not ours.
+    const named = match[1] ?? match[2];
+    if (named && named.toLowerCase() !== fullName.toLowerCase()) continue;
+    const issueNumber = Number(match[3]);
+    if (Number.isSafeInteger(issueNumber) && issueNumber > 0) numbers.add(issueNumber);
+  }
+  return [...numbers];
+}
+
 export function isBot(login: string, type: string): boolean {
   return type === "Bot" || login.endsWith("[bot]");
 }
