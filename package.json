@@ -13,7 +13,6 @@
     "eval": "eve eval",
     "backfill": "tsx --env-file-if-exists=.env.local scripts/backfill.ts",
     "propose-setup": "tsx --env-file-if-exists=.env.local scripts/propose-setup.ts",
-    "seed": "tsx --env-file-if-exists=.env.local scripts/seed-playground.ts",
     "start": "eve start",
     "typecheck": "tsc",
     "validate-config": "tsx --env-file-if-exists=.env.local scripts/validate-config.ts"

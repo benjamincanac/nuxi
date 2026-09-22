@@ -41,7 +41,7 @@ securityPolicy: https://github.com/nuxt/.github/blob/main/SECURITY.md
 help: https://nuxt.com        # where non-triage questions are pointed
 ```
 
-The other keys are `decisions`, `thresholds`, `sweep`, `discord`, `reproduction`, `source` and `triageMaintainerIssues`. The schema with its defaults is [`agent/config.ts`](agent/config.ts), and [`examples/`](examples) has a full file for `nuxt/ui` and one for a playground.
+The other keys are `decisions`, `thresholds`, `sweep`, `discord`, `reproduction`, `source` and `triageMaintainerIssues`. The schema with its defaults is [`agent/config.ts`](agent/config.ts), and [`examples/`](examples) has a full file for `nuxt/ui`.
 
 What a repository already declares is not repeated. The reproduction guide, the starter links and the playground host come from the reproduction field of its issue form. Without a guide there, the request links [Why Reproductions are Required](https://antfu.me/posts/why-reproductions-are-required).
 
@@ -69,7 +69,6 @@ The kind of issue is read from the forms too. Each form says how the repository 
 | `pnpm typecheck`, `pnpm build` | Validation |
 | `pnpm validate-config [file]` | Checks a `tia.yml`, `.github/tia.yml` by default |
 | `pnpm propose-setup <owner/repo>` | Prints the setup pull request, writes nothing |
-| `pnpm seed --from <repo> --to <repo>` | Copies issues into a playground |
 | `pnpm backfill <owner/repo>` | Dry-runs a whole backlog into `backfill.csv` |
 | `pnpm run deploy` | Deploys to production |
 

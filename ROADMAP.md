@@ -65,30 +65,14 @@ Before this is open to every repository in an organization, the digest should re
 
 Steps 1 and 2 need no code. Everything after them is the work.
 
-## Retiring the playground
+## What is not needed any more
 
-The playground is a test bench, not a part of tia. It is the only repository where a run can go from the webhook to a Discord approval to a real write without touching a real backlog, and that is what makes an eve upgrade safe to check. eve still ships breaking minors every few days, so it stays for now.
+The playground is gone. `benjamincanac/tia` is the test repository now: the app is installed on it, it has its own config, and a run goes from the webhook to a Discord approval to a real write without touching a real backlog.
 
-Since the issue kinds are read from the issue forms, it runs in label mode on purpose: two forms of its own that mark a bug with `bug` and a request with `enhancement`, no Issue Type, and `source` turned off so those forms are the ones read. `nuxt/ui` covers the Issue Type path, so the playground is the only place that covers this one. Areas are empty there as a result, and the seeded issues no longer count as waiting for triage.
+Two config keys are worth a second look. `source` reads areas, releases and the next major branch from another repository, and nothing declares it today. `triageMaintainerIssues` is what makes a test repository usable, so it stays.
 
-It can go once two things are true: eve upgrades stop breaking the agent, and `nuxt/ui` runs with approvals, which puts the same chain under real traffic.
-
-### What goes with it
-
-| What | Where |
-| --- | --- |
-| The `pnpm seed` row | [`README.md`](README.md) |
-| The seed script and its `seed` entry | [`scripts/seed-playground.ts`](scripts/seed-playground.ts), `package.json` |
-| The playground config | [`examples/playground.tia.yml`](examples/playground.tia.yml) |
-| Step 4, and the playground wording in steps 5, 7 and 9 | [`SETUP.md`](SETUP.md) |
-| The production app's installation on the playground | GitHub |
-
-Two config keys are worth a second look at that point. `source` reads areas, releases and the next major branch from another repository, and the playground was the only config that needed it, before it turned it off. If nothing else does, the key goes. `triageMaintainerIssues` was added for seeded issues, but a real repository may still want it, so it probably stays.
-
-Areas get the same look. The live `nuxt/ui` config does not declare any, so no repository uses them today. Only the two files in [`examples/`](examples) do, where they add one Jev question per component to every issue for a single output, the "Top clusters" field of the weekly digest. If no repository asks for them, they go from the examples first and from the code after.
+Areas get the same look. The live `nuxt/ui` config does not declare any, so no repository uses them today. Only [`examples/nuxt-ui.tia.yml`](examples/nuxt-ui.tia.yml) does, where they add one Jev question per component to every issue for a single output, the "Top clusters" field of the weekly digest. If no repository asks for them, they go from the example first and from the code after.
 
 ### What stays
 
-The preview GitHub App. It is what keeps previews and local runs away from the production token, and that is enforced by GitHub rather than by a guard in the code. It needs one repository to be installed on, which can be any test repository and does not need to be documented.
-
-An opt-out of the weekly digest, `discord.digestChannel: false`, was only ever wanted for the playground. It is not worth a schema change if the playground is going away.
+An opt-out of the weekly digest, `discord.digestChannel: false`. Nothing asks for it today, and it is not worth a schema change until something does.

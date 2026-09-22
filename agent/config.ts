@@ -46,11 +46,11 @@ const repoSlug = z.string().regex(/^[\w.-]+\/[\w.-]+$/, "Expected owner/repo");
 
 export const repoConfigSchema = z.strictObject({
   maintainers: z.array(z.string().min(1)).min(1),
-  /** Issues authored by a maintainer are skipped. Turn on for a playground seeded from your own account. */
+  /** Issues authored by a maintainer are skipped. Turn on for a test repository you open issues on yourself. */
   triageMaintainerIssues: z.boolean().default(false),
   /**
    * The code lives in another repository. Areas, releases and the next major branch are read from there.
-   * Meant for a playground that mirrors the issues of a real repository.
+   * Meant for a test repository that mirrors the issues of a real one.
    */
   source: repoSlug.optional(),
   /**
