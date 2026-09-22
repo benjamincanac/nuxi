@@ -39,7 +39,7 @@ export interface SweepSummary {
   repo: string;
   queued: number;
   unchanged: number;
-  /** Left for the next sweep by `sweep.maxPerDay`. */
+  /** Left for the next sweep by `limit`. */
   deferred: number;
   newRelease: string | null;
   upstreamClosed: number;
@@ -76,10 +76,10 @@ export async function sweepRepo(config: RepoConfig, options: { force?: boolean; 
   const newRelease = latest !== null && latest !== lastSeen ? latest : null;
   const base: Pick<QueueItem, "owner" | "repo" | "explicit"> = { owner: config.owner, repo: config.repo, explicit: options.explicit };
 
-  // A backlog tia has never seen is entirely new to it, and every issue it queues can ask a
-  // maintainer for an approval. The cap spreads that first pass over days instead of one morning.
-  // What is left is not marked as evaluated, so the next sweep starts where this one stopped.
-  const limit = options.limit ?? config.sweep.maxPerDay;
+  // `limit` caps what is queued, not what is considered. An unchanged issue costs nothing, so it
+  // must not use up the budget, or a limited sweep over a quiet backlog would queue nothing at all.
+  // What is left is never fingerprinted, so the next sweep starts where this one stopped.
+  const limit = options.limit ?? issues.length;
   let queued = 0;
   let unchanged = 0;
   let deferred = 0;
