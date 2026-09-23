@@ -138,7 +138,7 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
           labels.push("needs reproduction");
           facts.push("REPRODUCTION_REQUEST");
         }
-        decided = true;
+        // Not a decision: the issue stays in triage, so it is still there once the reproduction lands.
       } else {
         next.push("validate_reproduction");
       }

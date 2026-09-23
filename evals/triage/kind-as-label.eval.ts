@@ -10,7 +10,7 @@ interface Applied {
 
 export default defineEval({
   description:
-    "A repository whose forms mark a bug with the `bug` label and no Issue Type gets that label, no type, and loses its own intake label.",
+    "A repository whose forms mark a bug with the `bug` label and no Issue Type gets that label and no type. It keeps its intake label while it waits for a reproduction.",
   async test(t) {
     await t.send(triagePrompt("kind-as-label"));
     t.succeeded();
@@ -23,7 +23,7 @@ export default defineEval({
           applied.addedLabels.includes("bug") &&
           applied.addedLabels.includes("needs reproduction") &&
           !applied.addedLabels.includes("enhancement") &&
-          applied.removedLabels.includes("needs triage")
+          !applied.removedLabels.includes("needs triage")
         );
       },
     });

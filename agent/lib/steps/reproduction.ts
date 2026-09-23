@@ -132,7 +132,6 @@ export async function validateReproduction(context: TriageContext, signal?: Abor
 
   if (links.length > 0 && !valid) {
     patch.addLabels = issue.labels.includes("needs reproduction") ? [] : ["needs reproduction"];
-    patch.removeLabels = context.intakeLabels;
     patch.facts = [`The reproduction is the unmodified starter template: ${links.map((link) => link.url).join(", ")}.`, "REPRODUCTION_REQUEST"];
   } else if (valid && valid.kind !== "playground" && reported && latestVersion && isBehind(reported, latestVersion)) {
     // Only a sandbox or a repository pins a version. The repository's own playground and docs run its current release.
