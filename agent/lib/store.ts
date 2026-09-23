@@ -236,6 +236,10 @@ export async function markOnce(ref: IssueRef, marker: string): Promise<boolean> 
   return true;
 }
 
+export async function isMarked(ref: IssueRef, marker: string): Promise<boolean> {
+  return Boolean(await kv().get<number>(`tia:once:${issueKey(ref)}:${marker}`));
+}
+
 /** Set by the ops trigger so an explicit run on a preview deployment may write for one hour. */
 export function allowPreviewWrite(ref: IssueRef): Promise<void> {
   return kv().set(`tia:explicit:${issueKey(ref)}`, Date.now(), 60 * 60);

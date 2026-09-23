@@ -6,6 +6,7 @@ import github from "../channels/github";
 import { requireApproval, type RepoConfig } from "../config";
 import { loadRepoConfig, repositoryId } from "./github";
 import { ask, clip } from "./jev";
+import { getPullRequest, pullRequestTargets } from "./steps/pull-request";
 import { allowPreviewWrite, clearPlan, drainQueue, enqueue, forceDryRun, markOnce, type QueueItem, type QueueReason } from "./store";
 
 type Auth = Parameters<ReturnType<ScheduleToFn>["send"]>[1]["auth"];
@@ -118,6 +119,9 @@ export async function drainAndDispatch(to: ScheduleToFn, auth: Auth, limit: numb
 export async function dispatch(to: ScheduleToFn, auth: Auth, item: QueueItem): Promise<"discord" | "github" | "disabled" | "skipped"> {
   const config = await loadRepoConfig(item);
   if (!config) return "disabled";
+  // Most pull requests close nothing worth announcing. Deciding here keeps them out of a session,
+  // and so out of the approvals channel.
+  if (item.reason === "pull_request" && (await pullRequestTargets(item, await getPullRequest(item, item.issueNumber))).length === 0) return "skipped";
   // The plan lives under the issue, so the run starts from nothing rather than from the last one.
   await clearPlan(item);
   if (item.explicit) await allowPreviewWrite(item);

@@ -441,7 +441,9 @@ export interface PullRequestBody {
 export function linkedIssues(pr: PullRequestBody, fullName: string): number[] {
   if (["COLLABORATOR", "MEMBER", "OWNER"].includes(pr.author_association)) return [];
   const numbers = new Set<number>();
-  for (const match of `${pr.title}\n${pr.body ?? ""}`.matchAll(CLOSING_REFERENCE)) {
+  // Pull request templates show "Resolves #123" as an example inside an HTML comment.
+  const text = `${pr.title}\n${pr.body ?? ""}`.replace(/<!--[\s\S]*?-->/g, "");
+  for (const match of text.matchAll(CLOSING_REFERENCE)) {
     // A closing reference can name its repository, as a URL or as `owner/repo#1`. Another one is not ours.
     const named = match[1] ?? match[2];
     if (named && named.toLowerCase() !== fullName.toLowerCase()) continue;
