@@ -82,6 +82,7 @@ export async function checkDuplicate(context: TriageContext, signal?: AbortSigna
       candidates,
       duplicateOf,
       patch: {
+        keepLabels: context.intakeLabels,
         mentions: [{ template: "previously_reported", detail: `See #${duplicateOf.number}.` }],
         facts: [`The same thing was reported in #${duplicateOf.number}, which is closed. Link it.`],
       },

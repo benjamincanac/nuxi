@@ -40,9 +40,19 @@ export interface TriagePlan {
   /** Security report: the mention is the only comment. */
   security: boolean;
   skipped: string | null;
+  /** Versions for the templated retest request, set with the `RETEST_REQUEST` fact. */
+  retest?: RetestRequest | null;
+  /** Labels no step may remove, whatever an earlier step planned. */
+  keepLabels?: string[];
   /** Issue Type after classification, existing or proposed. */
   type: string | null;
   steps: string[];
+}
+
+export interface RetestRequest {
+  name: string;
+  version: string;
+  latest: string;
 }
 
 export function emptyPlan(issue: IssueRef, runId: string, dryRun: boolean): TriagePlan {
@@ -59,6 +69,8 @@ export function emptyPlan(issue: IssueRef, runId: string, dryRun: boolean): Tria
     escalate: false,
     security: false,
     skipped: null,
+    retest: null,
+    keepLabels: [],
     type: null,
     steps: [],
   };
@@ -75,7 +87,9 @@ export interface PlanPatch {
   security?: boolean;
   skipped?: string;
   type?: string;
-  /** A duplicate needs no reproduction: drops the planned `needs reproduction` and its request. */
+  retest?: RetestRequest;
+  keepLabels?: string[];
+  /** A duplicate needs no reproduction: drops the planned `needs reproduction`, its request and a retest request. */
   supersedesReproduction?: boolean;
 }
 
@@ -83,6 +97,7 @@ export function mergePlan(plan: TriagePlan, step: string, patch: PlanPatch): Tri
   const unique = (values: string[]) => [...new Set(values)];
   const drop = patch.supersedesReproduction === true;
   const mentions = [...plan.mentions];
+  const keepLabels = unique([...(plan.keepLabels ?? []), ...(patch.keepLabels ?? [])]);
   for (const mention of patch.mentions ?? []) {
     if (!mentions.some((existing) => existing.template === mention.template)) mentions.push(mention);
   }
@@ -90,13 +105,16 @@ export function mergePlan(plan: TriagePlan, step: string, patch: PlanPatch): Tri
     ...plan,
     setType: patch.setType ?? plan.setType,
     addLabels: unique([...plan.addLabels, ...(patch.addLabels ?? [])]).filter((label) => !drop || label !== "needs reproduction"),
-    removeLabels: unique([...plan.removeLabels, ...(patch.removeLabels ?? [])]),
+    removeLabels: unique([...plan.removeLabels, ...(patch.removeLabels ?? [])]).filter((label) => !keepLabels.includes(label)),
     mentions,
     areas: unique([...plan.areas, ...(patch.areas ?? [])]),
-    facts: [...plan.facts, ...(patch.facts ?? [])].filter((fact) => !drop || fact !== "REPRODUCTION_REQUEST"),
+    // A retest asks about a reproduction too, so it goes with it.
+    facts: [...plan.facts, ...(patch.facts ?? [])].filter((fact) => !drop || (fact !== "REPRODUCTION_REQUEST" && fact !== "RETEST_REQUEST")),
     escalate: plan.escalate || (patch.escalate ?? false),
     security: plan.security || (patch.security ?? false),
     skipped: patch.skipped ?? plan.skipped,
+    retest: drop ? null : (patch.retest ?? plan.retest ?? null),
+    keepLabels,
     type: patch.type ?? plan.type,
     steps: unique([...plan.steps, step]),
   };
