@@ -28,11 +28,6 @@ export const classifyQuestions = {
     instructions:
       "Would resolving this require a breaking change to the public API (renaming or removing options, changing defaults or documented behavior) so that it can only ship in the next major version?",
   },
-  is_a11y: {
-    type: "boolean",
-    instructions:
-      "Is this about accessibility: screen readers, ARIA attributes, keyboard navigation, focus management, contrast or reduced motion?",
-  },
   needs_human: {
     type: "boolean",
     instructions:

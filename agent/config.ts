@@ -12,7 +12,6 @@ export const DECISIONS = [
   "duplicate",
   "answered",
   "breaking",
-  "a11y",
   "area",
   "pr",
   "stale",
