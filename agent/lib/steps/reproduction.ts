@@ -137,8 +137,9 @@ export async function validateReproduction(context: TriageContext, signal?: Abor
     // Only a sandbox or a repository pins a version. The repository's own playground and docs run its current release.
     // Asked once. The sweep would otherwise repeat it on every run.
     const first = context.dryRun ? true : await markOnce(issue, "retest-on-latest");
-    if (first) {
-      patch.facts = [`The report is on ${config.package?.name} ${reported}, the latest is ${latestVersion}. Ask the reporter to retest on the latest version first.`];
+    if (first && config.package) {
+      patch.facts = ["RETEST_REQUEST"];
+      patch.retest = { name: config.package.name, version: reported, latest: latestVersion };
     }
   }
 

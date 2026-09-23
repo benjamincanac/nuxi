@@ -2,7 +2,7 @@ import { defaultDiscordAuth, discordChannel, renderInputRequestComponents } from
 import { z } from "zod";
 
 import { env, requireApproval } from "../config";
-import { mentionLine, reporterText, reproductionRequest } from "../lib/apply";
+import { buildComment, reporterText } from "../lib/apply";
 import { loadTriageContext } from "../lib/context";
 import { discordCredentials } from "../lib/discord";
 import { emptyPlan } from "../lib/plan";
@@ -36,9 +36,8 @@ async function describeWrite(input: unknown, runId: string): Promise<string> {
   if (add.length) lines.push(`Add: ${add.join(", ")}`);
   if (remove.length) lines.push(`Remove: ${remove.join(", ")}`);
 
-  const request = plan.facts.includes("REPRODUCTION_REQUEST") && context ? `\n\n${reproductionRequest(context.reproduction)}` : "";
-  const mention = context ? mentionLine(context.config, plan) : "";
-  const body = [reporterText(recorded, comment), request, mention && `\n\n${mention}`].filter(Boolean).join("");
+  // What `apply_triage` would post, built the same way.
+  const body = context ? buildComment(context.config, plan, reporterText(recorded, comment), context.reproduction) : reporterText(recorded, comment);
   if (body) lines.push("", body.length > 900 ? `${body.slice(0, 900)}…` : body);
   return lines.join("\n");
 }
