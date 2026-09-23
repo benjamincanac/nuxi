@@ -16,7 +16,7 @@ export const classifyQuestions = {
   has_reproduction: {
     type: "boolean",
     instructions:
-      "Does the issue body or any comment contain a usable reproduction: a StackBlitz, CodeSandbox or repository link, or a complete minimal code snippet that can be pasted and run as is? Screenshots, partial snippets and the unmodified starter template do not count.",
+      "Does the issue body or any comment point to a reproduction: a link where the problem can be run or seen, such as a StackBlitz, CodeSandbox, repository or playground link, or a page of the project's own documentation or site that shows it, or a complete minimal code snippet that can be pasted and run as is? Screenshots and partial snippets do not count.",
   },
   is_answered: {
     type: "boolean",

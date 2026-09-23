@@ -1,9 +1,8 @@
 import { z } from "zod";
 
 import type { RepoConfig } from "../../config";
-import type { ReproductionCheck, TriageContext } from "../context";
+import type { TriageContext } from "../context";
 import { sectionOf, type ReproductionSettings } from "../issue-forms";
-import { ghText } from "../github";
 import type { PlanPatch } from "../plan";
 import { markOnce } from "../store";
 
@@ -11,14 +10,15 @@ const LINK_PATTERN = /https?:\/\/[^\s)>\]"'`]+/gi;
 
 export interface ReproductionLink {
   url: string;
-  kind: ReproductionCheck["kind"];
-  repository: ReproductionCheck["repository"];
+  kind: "stackblitz" | "codesandbox" | "github" | "playground";
+  /** The unmodified starter from the repository's issue form. */
+  blankTemplate: boolean;
 }
 
-function parseRepository(segments: string[]): ReproductionCheck["repository"] {
-  const [owner, repo, tree, ...ref] = segments;
+function parseRepository(segments: string[]): { owner: string; repo: string } | null {
+  const [owner, repo] = segments;
   if (!owner || !repo) return null;
-  return { owner, repo: repo.replace(/\.git$/, ""), ref: tree === "tree" && ref.length ? ref.join("/") : null };
+  return { owner, repo: repo.replace(/\.git$/, "") };
 }
 
 /** First path segments on github.com that are not an account. */
@@ -50,22 +50,28 @@ function contextRepositories(config: RepoConfig): Set<string> {
 
 export function extractReproductionLinks(text: string, config: RepoConfig, settings: ReproductionSettings): ReproductionLink[] {
   const ignored = contextRepositories(config);
+  const blank = settings.blank.map((entry) => entry.toLowerCase());
   const links: ReproductionLink[] = [];
+  const push = (url: URL, kind: ReproductionLink["kind"]) => {
+    const href = url.href.toLowerCase();
+    const bare = href.replace(/[#?].*$/, "").replace(/\/+$/, "");
+    // A sandbox starter is recognized by its id. A playground is blank when the link carries no state.
+    const blankTemplate =
+      kind === "playground"
+        ? href.replace(/\/+$/, "") === bare && blank.some((entry) => entry.replace(/\/+$/, "") === bare)
+        : blank.some((entry) => href.includes(entry));
+    links.push({ url: url.href, kind, blankTemplate });
+  };
   for (const match of text.matchAll(LINK_PATTERN)) {
     // Reporters paste broken links. One that does not parse is not a reproduction.
     const url = URL.parse(match[0].replace(/[.,;]+$/, ""));
     if (!url) continue;
     const segments = url.pathname.split("/").filter(Boolean);
     const host = url.hostname.replace(/^www\./, "");
-    if (host === "stackblitz.com") {
-      const repository = segments[0] === "github" ? parseRepository(segments.slice(1)) : null;
-      links.push({ url: url.href, kind: "stackblitz", repository });
-    } else if (host === "codesandbox.io") {
-      links.push({ url: url.href, kind: "codesandbox", repository: null });
-    } else if (settings.hosts.includes(host)) {
-      // A host the repo's issue form points reporters to, such as its own playground.
-      links.push({ url: url.href, kind: "playground", repository: null });
-    } else if (host === "github.com") {
+    if (host === "stackblitz.com") push(url, "stackblitz");
+    else if (host === "codesandbox.io") push(url, "codesandbox");
+    // A host the repo's issue form points reporters to, such as its own playground.
+    else if (settings.hosts.includes(host)) push(url, "playground"); else if (host === "github.com") {
       const repository = parseRepository(segments);
       const reserved = ["issues", "pull", "blob", "commit", "discussions", "releases"];
       // Links to issues or to files are context, not reproductions.
@@ -74,63 +80,10 @@ export function extractReproductionLinks(text: string, config: RepoConfig, setti
       // parses as the repository "user-attachments/assets". The rest are site paths, not accounts.
       if (NOT_ACCOUNTS.has(repository.owner.toLowerCase())) continue;
       if (ignored.has(`${repository.owner}/${repository.repo}`.toLowerCase())) continue;
-      links.push({ url: url.href, kind: "github", repository });
+      push(url, "github");
     }
   }
   return links.filter((link, index) => links.findIndex((other) => other.url === link.url) === index);
-}
-
-const packageJsonSchema = z.object({
-  dependencies: z.record(z.string(), z.string()).optional(),
-  devDependencies: z.record(z.string(), z.string()).optional(),
-});
-
-async function resolves(url: string, signal?: AbortSignal): Promise<boolean> {
-  try {
-    const response = await fetch(url, { method: "GET", redirect: "follow", signal });
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
-
-export async function inspectLink(link: ReproductionLink, config: RepoConfig, settings: ReproductionSettings, signal?: AbortSignal): Promise<ReproductionCheck> {
-  const blank = settings.blank.map((entry) => entry.toLowerCase());
-  const bare = link.url.toLowerCase().replace(/[#?].*$/, "").replace(/\/+$/, "");
-  const base: ReproductionCheck = {
-    url: link.url,
-    kind: link.kind,
-    resolves: false,
-    usesPackage: null,
-    // A sandbox starter is recognized by its id. A playground is blank when the link carries no state.
-    blankTemplate:
-      link.kind === "playground"
-        ? link.url.toLowerCase().replace(/\/+$/, "") === bare && blank.some((entry) => entry.replace(/\/+$/, "") === bare)
-        : blank.some((entry) => link.url.toLowerCase().includes(entry)),
-    version: null,
-    repository: link.repository,
-  };
-
-  if (!link.repository) {
-    // StackBlitz projects and CodeSandbox devboxes expose no stable API to read their package.json.
-    return { ...base, resolves: await resolves(link.url, signal) };
-  }
-
-  const { owner, repo, ref } = link.repository;
-  const query = ref ? `?ref=${encodeURIComponent(ref)}` : "";
-  const source = await ghText(`/repos/${owner}/${repo}/contents/package.json${query}`, { signal }).catch(() => null);
-  if (source === null) return { ...base, resolves: await resolves(link.url, signal) };
-  if (!config.package) return { ...base, resolves: true };
-
-  const parsed = packageJsonSchema.safeParse(JSON.parse(source));
-  const dependencies = parsed.success ? { ...parsed.data.devDependencies, ...parsed.data.dependencies } : {};
-  const range = dependencies[config.package.name] ?? null;
-  return {
-    ...base,
-    resolves: true,
-    usesPackage: range !== null,
-    version: range?.match(/\d+\.\d+\.\d+(?:-[\w.]+)?/)?.[0] ?? null,
-  };
 }
 
 const latestSchema = z.object({ version: z.string() });
@@ -155,12 +108,16 @@ export function isBehind(version: string, latest: string): boolean {
 }
 
 export interface ReproductionOutcome {
-  checks: ReproductionCheck[];
-  valid: ReproductionCheck | null;
+  links: ReproductionLink[];
+  valid: ReproductionLink | null;
   latestVersion: string | null;
   patch: PlanPatch;
 }
 
+/**
+ * Nothing is fetched. Sandboxes put bot challenges in front of every link, real or not, so a fetch
+ * says nothing about the reproduction. A link is taken as given, unless it is the bare starter.
+ */
 export async function validateReproduction(context: TriageContext, signal?: AbortSignal): Promise<ReproductionOutcome> {
   const { config, issue, fixture, reproduction: settings } = context;
   // The form field comes first. Reporters also paste links in the description or in later comments.
@@ -169,37 +126,22 @@ export async function validateReproduction(context: TriageContext, signal?: Abor
   const text = [field, issue.body, ...issue.comments.filter((c) => c.author === issue.author).map((c) => c.body)].join("\n");
 
   const latestVersion = fixture?.latestVersion ?? (config.package ? await latestPackageVersion(config.package.name, signal) : null);
-  const checks = fixture
-    ? fixture.reproduction
-      ? [fixture.reproduction]
-      : []
-    : await Promise.all(extractReproductionLinks(text, config, settings).slice(0, 3).map((link) => inspectLink(link, config, settings, signal)));
-
-  const usable = checks.filter((check) => check.resolves && !check.blankTemplate && check.usesPackage !== false);
-  const valid = usable[0] ?? null;
+  const links = extractReproductionLinks(text, config, settings);
+  const valid = links.find((link) => !link.blankTemplate) ?? null;
   const patch: PlanPatch = {};
 
-  if (checks.length > 0 && !valid) {
-    const reasons = checks.map((check) =>
-      !check.resolves
-        ? `${check.url} does not resolve`
-        : check.blankTemplate
-          ? `${check.url} is the unmodified template`
-          : `${check.url} does not depend on ${config.package?.name ?? "the package"}`,
-    );
+  if (links.length > 0 && !valid) {
     patch.addLabels = issue.labels.includes("needs reproduction") ? [] : ["needs reproduction"];
     patch.removeLabels = context.intakeLabels;
-    patch.facts = [`The reproduction is not usable: ${reasons.join("; ")}.`, "REPRODUCTION_REQUEST"];
-  } else if (valid && latestVersion && isBehind(valid.version ?? reported ?? latestVersion, latestVersion)) {
-    const version = valid.version ?? reported;
+    patch.facts = [`The reproduction is the unmodified starter template: ${links.map((link) => link.url).join(", ")}.`, "REPRODUCTION_REQUEST"];
+  } else if (valid?.kind !== "playground" && reported && latestVersion && isBehind(reported, latestVersion)) {
+    // Not on the repository's own playground, which runs its current release whatever the reporter's project is on.
     // Asked once. The sweep would otherwise repeat it on every run.
     const first = context.dryRun ? true : await markOnce(issue, "retest-on-latest");
     if (first) {
-      patch.facts = [
-        `The ${valid.version ? "reproduction uses" : "report is on"} ${config.package?.name} ${version}, the latest is ${latestVersion}. Ask the reporter to retest on the latest version first.`,
-      ];
+      patch.facts = [`The report is on ${config.package?.name} ${reported}, the latest is ${latestVersion}. Ask the reporter to retest on the latest version first.`];
     }
   }
 
-  return { checks, valid, latestVersion, patch };
+  return { links, valid, latestVersion, patch };
 }

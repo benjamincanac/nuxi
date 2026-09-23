@@ -47,18 +47,5 @@
   },
   "similar": [],
   "fixedCandidates": [],
-  "upstreamCandidates": [],
-  "reproduction": {
-    "url": "https://github.com/johndoe/acme-select-repro",
-    "kind": "github",
-    "resolves": true,
-    "usesPackage": true,
-    "blankTemplate": false,
-    "version": "1.4.0",
-    "repository": {
-      "owner": "johndoe",
-      "repo": "acme-select-repro",
-      "ref": null
-    }
-  }
+  "upstreamCandidates": []
 }

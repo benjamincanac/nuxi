@@ -47,18 +47,5 @@
   },
   "similar": [],
   "fixedCandidates": [],
-  "upstreamCandidates": [],
-  "reproduction": {
-    "url": "https://github.com/priyad/acme-input-debounce-repro",
-    "kind": "github",
-    "resolves": true,
-    "usesPackage": true,
-    "blankTemplate": false,
-    "version": "1.1.0",
-    "repository": {
-      "owner": "priyad",
-      "repo": "acme-input-debounce-repro",
-      "ref": null
-    }
-  }
+  "upstreamCandidates": []
 }

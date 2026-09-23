@@ -47,14 +47,5 @@
   },
   "similar": [],
   "fixedCandidates": [],
-  "upstreamCandidates": [],
-  "reproduction": {
-    "url": "https://stackblitz.com/edit/acme-ui-starter-8f2k1q",
-    "kind": "stackblitz",
-    "resolves": true,
-    "usesPackage": null,
-    "blankTemplate": true,
-    "version": null,
-    "repository": null
-  }
+  "upstreamCandidates": []
 }

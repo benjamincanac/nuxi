@@ -55,6 +55,5 @@
       "url": "https://github.com/unovue/reka-ui/issues/452",
       "body": "getBoundingClientRect is called on a reference that can already be null if the element unmounts during a pending position update."
     }
-  ],
-  "reproduction": null
+  ]
 }
