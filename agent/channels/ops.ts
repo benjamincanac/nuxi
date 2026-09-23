@@ -12,7 +12,7 @@ import { dispatch, drainAndDispatch } from "../lib/dispatch";
 import { gh, listOpenIssues, loadRepoConfig } from "../lib/github";
 import { openSetupPullRequest, proposeSetup } from "../lib/setup";
 import { DISPATCH_BATCH, sweepRepo } from "../lib/sweep";
-import { enqueue, listDecisions, listInstallations } from "../lib/store";
+import { enqueue, forgetRepo, listDecisions, listInstallations } from "../lib/store";
 
 const OPS_AUTH = {
   authenticator: "ops",
@@ -40,7 +40,7 @@ function authorized(request: Request): boolean {
 }
 
 /**
- * Manual triggers for previews and backfills: `triage`, `sweep`, `backfill` and `digest`.
+ * Manual triggers for previews and backfills: `triage`, `sweep`, `reset`, `backfill` and `digest`.
  * The path sits outside `/eve/v1`, which eve reserves for its own routes.
  */
 export default defineChannel({
@@ -103,6 +103,9 @@ export default defineChannel({
           if (!production) waitUntil(drainAndDispatch(to, OPS_AUTH, summary.queued + summary.upstreamClosed));
           return Response.json(summary);
         }
+        // Run before a sweep to evaluate the backlog again from scratch, as many times as it takes.
+        case "reset":
+          return Response.json({ repo: body.data.repo, deleted: await forgetRepo(body.data.repo) });
         case "backfill": {
           // Whole open backlog, always dry-run. Results are read back from the decision log.
           const since = new Date().toISOString();
@@ -125,7 +128,7 @@ export default defineChannel({
           return Response.json(digest);
         }
         default:
-          return Response.json({ error: `Unknown trigger ${params.id}`, available: ["triage", "sweep", "backfill", "digest", "setup", "check"] }, { status: 404 });
+          return Response.json({ error: `Unknown trigger ${params.id}`, available: ["triage", "sweep", "reset", "backfill", "digest", "setup", "check"] }, { status: 404 });
       }
     }),
 

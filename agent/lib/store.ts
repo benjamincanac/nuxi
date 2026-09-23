@@ -63,6 +63,7 @@ interface KeyValue {
   hset(key: string, field: string, value: unknown): Promise<void>;
   hgetall<T>(key: string): Promise<Record<string, T>>;
   hdel(key: string, field: string): Promise<void>;
+  keys(pattern: string): Promise<string[]>;
 }
 
 function redisStore(redis: Redis): KeyValue {
@@ -91,6 +92,16 @@ function redisStore(redis: Redis): KeyValue {
     },
     async hdel(key, field) {
       await redis.hdel(key, field);
+    },
+    async keys(pattern) {
+      const found: string[] = [];
+      let cursor: string | number = 0;
+      do {
+        const [next, batch]: [string | number, string[]] = await redis.scan(cursor, { match: pattern, count: 500 });
+        found.push(...batch);
+        cursor = next;
+      } while (String(cursor) !== "0");
+      return found;
     },
   };
 }
@@ -137,6 +148,10 @@ function memoryStore(): KeyValue {
     },
     async hdel(key, field) {
       hashes.get(key)?.delete(field);
+    },
+    async keys(pattern) {
+      const matcher = new RegExp(`^${pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`);
+      return [...values.keys(), ...lists.keys(), ...hashes.keys()].filter((key) => matcher.test(key));
     },
   };
 }
@@ -311,6 +326,22 @@ export async function takeRepoPasses(): Promise<{ repo: string; pass: RepoPass }
   const entries = Object.entries(stored);
   if (entries.length) await kv().del(PENDING_KEY);
   return entries.map(([repo, pass]) => ({ repo, pass }));
+}
+
+/**
+ * Forgets everything tia remembers about a repository's issues: fingerprints, once-only markers,
+ * announced comments, classifications, plans, the last seen release and its queued runs. The next
+ * sweep then evaluates the whole backlog as if it were the first. The decision log is kept.
+ */
+export async function forgetRepo(repo: string): Promise<number> {
+  const slug = repo.toLowerCase();
+  const keys = [...(await kv().keys(`tia:*:${slug}#*`)), `tia:release:${slug}`];
+  for (const key of keys) await kv().del(key);
+  const queued = await kv().lrange<QueueItem>(QUEUE_KEY, 0, -1);
+  const kept = queued.filter((item) => `${item.owner}/${item.repo}`.toLowerCase() !== slug);
+  await kv().del(QUEUE_KEY);
+  for (const item of kept) await kv().rpush(QUEUE_KEY, item);
+  return keys.length + queued.length - kept.length;
 }
 
 export function enqueue(item: QueueItem): Promise<void> {
