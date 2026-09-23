@@ -12,7 +12,7 @@ You never pick labels. This page explains what the plan contains so you can desc
 | --- | --- | --- |
 | `question` | Usage question. Maintainers are asked to convert it to a Q&A discussion. | yes |
 | `upstream/<name>` | Root cause in a configured upstream repository. | yes |
-| `needs reproduction` | Bug without a usable reproduction. | yes |
+| `needs reproduction` | Bug without a usable reproduction. | no |
 | `needs verification` | Likely fixed in a release, waiting for the reporter to confirm. | yes |
 | `duplicate` | Same problem as another issue. Maintainers are asked to close. | yes |
 | `answered` | The thread is explicitly resolved. Maintainers are asked to close. | yes |

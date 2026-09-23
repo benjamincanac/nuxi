@@ -25,12 +25,7 @@ export default defineTool({
     );
     const hasReproduction = answers.has_reproduction.probability >= context.config.thresholds.has_reproduction;
     const patch = hasReproduction
-      ? {
-          // Asking for the reproduction took the issue out of triage. It is actionable again, so it goes back.
-          addLabels: context.intakeLabels.filter((label) => !context.issue.labels.includes(label)),
-          removeLabels: ["needs reproduction"],
-          facts: [`Thank @${comment.author} for the reproduction.`],
-        }
+      ? { removeLabels: ["needs reproduction"], facts: [`Thank @${comment.author} for the reproduction.`] }
       : {};
 
     await updatePlan(runId(ctx), ref, context.dryRun, "check_reproduction_comment", patch);
