@@ -152,6 +152,14 @@ curl "$TIA_URL/ops/decisions?repo=<owner>/<repo>&since=<iso date>" \
 
 # The whole open backlog through the pipeline on your machine, as a CSV. Writes nothing.
 pnpm backfill <owner>/<repo>
+
+# Forget what tia remembers about the repository, then sweep it again from scratch.
+curl -X POST $TIA_URL/ops/reset/trigger \
+  -H "authorization: Bearer $INTERNAL_API_SECRET" -H "content-type: application/json" \
+  -d '{ "repo": "<owner>/<repo>" }'
+curl -X POST $TIA_URL/ops/sweep/trigger \
+  -H "authorization: Bearer $INTERNAL_API_SECRET" -H "content-type: application/json" \
+  -d '{ "repo": "<owner>/<repo>", "write": true }'
 ```
 
 Read either one, adjust `thresholds` in the repository's config, and when you stop disagreeing with the prompts, set `TIA_REQUIRE_APPROVAL=false` and redeploy to let it write on its own.
