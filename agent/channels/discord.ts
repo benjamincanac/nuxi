@@ -6,7 +6,7 @@ import { mentionLine, reporterText, reproductionRequest } from "../lib/apply";
 import { loadTriageContext } from "../lib/context";
 import { discordCredentials } from "../lib/discord";
 import { emptyPlan } from "../lib/plan";
-import { getPlan } from "../lib/store";
+import { getPlan, markPrompted, wasPrompted } from "../lib/store";
 
 function maintainerIds(): string[] {
   return (env("DISCORD_MAINTAINER_IDS") ?? "").split(",").map((id) => id.trim()).filter(Boolean);
@@ -72,6 +72,19 @@ export default discordChannel({
     return { auth: defaultDiscordAuth(interaction) };
   },
   events: {
+    // A scheduled run speaks through its approval prompt alone. The prompt says what would be written
+    // and its button what was decided, so the model's own summary is noise, and a run that asked
+    // nothing removes its opening message: a sweep would otherwise leave one per issue.
+    async "message.completed"(event, channel) {
+      if (event.finishReason === "tool-calls") return;
+      const { channelId, conversationId, interactionToken } = channel.discord;
+      if (interactionToken || !conversationId) {
+        if (event.message) await channel.discord.post(event.message);
+        return;
+      }
+      if (await wasPrompted(conversationId)) return;
+      await channel.discord.request(`/channels/${channelId}/messages/${conversationId}`, {}, { botAuth: true, method: "DELETE" }).catch(() => undefined);
+    },
     async "input.requested"(event, channel, ctx) {
       const { channelId, conversationId, interactionToken } = channel.discord;
       let anchored = false;
@@ -89,6 +102,7 @@ export default discordChannel({
           // `request` takes plain JSON, and the rendered components are readonly.
           const json = JSON.parse(JSON.stringify(body)) as Parameters<typeof channel.discord.request>[1];
           await channel.discord.request(`/channels/${channelId}/messages/${conversationId}`, json, { botAuth: true, method: "PATCH" });
+          await markPrompted(conversationId);
           anchored = true;
           continue;
         }
