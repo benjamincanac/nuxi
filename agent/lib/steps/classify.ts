@@ -105,7 +105,7 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
     decided = true;
   } else if (isEnabled(config, "question") && answers.is_question.probability >= t.labels) {
     labels.push("question");
-    mentions.push({ template: "convert_to_discussion", detail: `Usage question.${summary}` });
+    mentions.push({ template: "convert_to_discussion", detail: summary.trim() });
     facts.push(`This reads as a usage question. A Q&A discussion is a better place for it${config.help ? `, and ${config.help} may already answer it` : ""}. A maintainer may convert it.`);
     decided = true;
   } else {
