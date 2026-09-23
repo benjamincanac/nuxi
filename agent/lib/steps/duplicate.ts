@@ -82,7 +82,7 @@ export async function checkDuplicate(context: TriageContext, signal?: AbortSigna
       candidates,
       duplicateOf,
       patch: {
-        mentions: [{ template: "previously_reported", detail: `Same as #${duplicateOf.number}, closed.` }],
+        mentions: [{ template: "previously_reported", detail: `See #${duplicateOf.number}.` }],
         facts: [`The same thing was reported in #${duplicateOf.number}, which is closed. Link it.`],
       },
     };
@@ -96,7 +96,7 @@ export async function checkDuplicate(context: TriageContext, signal?: AbortSigna
       addLabels: issue.labels.includes("duplicate") ? [] : ["duplicate"],
       removeLabels: context.intakeLabels,
       supersedesReproduction: true,
-      mentions: [{ template: "close_duplicate", detail: `Duplicate of #${duplicateOf.number}.` }],
+      mentions: [{ template: "close_duplicate", detail: `See #${duplicateOf.number}.` }],
       facts: [`This looks like a duplicate of #${duplicateOf.number}. Link it.`],
     },
   };
