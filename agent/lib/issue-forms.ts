@@ -171,7 +171,7 @@ function formLabels(labels: string | string[]): string[] {
 /**
  * Labels that several issue forms apply. They cannot say what kind of issue it is, so they are how
  * a repository marks an issue as waiting for triage, and they are what a decision removes. A
- * repository without forms, whose forms share no label, or with one form that applies several, has none.
+ * repository without forms, with a single form, or whose forms share no label, has none.
  */
 export function intakeLabelsFromForms(sources: readonly string[]): string[] {
   const perForm: string[][] = [];
@@ -187,7 +187,7 @@ export function intakeLabelsFromForms(sources: readonly string[]): string[] {
     perForm.push(formLabels(form.data.labels));
   }
   // A single form cannot tell its intake label from the one that says what the issue is, such as `bug`.
-  if (perForm.length === 1) return perForm[0]?.length === 1 ? perForm[0] : [];
+  if (perForm.length === 1) return [];
   // A label several forms apply cannot say which kind the issue is, so it marks the issue as new.
   const shared = (label: string) => perForm.filter((labels) => labels.includes(label)).length > 1;
   return [...new Set(perForm.flat())].filter(shared);
