@@ -14,4 +14,4 @@ description: Use when a bug has or lacks a reproduction, to phrase the request, 
 
 When every link is the starter, the plan switches to `needs reproduction`. Say that the link is the unmodified starter, then the templated request follows.
 
-When the report is behind the latest version, `validate_reproduction` returns the fact `RETEST_REQUEST`. The templated retest request naming both versions is appended by `apply_triage`. Write one short sentence before it, a thank you for the report and nothing else. This is asked once per issue.
+When the report is behind the latest version, `validate_reproduction` returns the fact `RETEST_REQUEST`. The templated retest request naming both versions is appended by `apply_triage`. Never ask for the retest yourself. Convey the facts of the other steps, and when there are none, write one short thank you. This is asked once per issue.

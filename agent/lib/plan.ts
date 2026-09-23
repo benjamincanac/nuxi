@@ -89,7 +89,7 @@ export interface PlanPatch {
   type?: string;
   retest?: RetestRequest;
   keepLabels?: string[];
-  /** A duplicate needs no reproduction: drops the planned `needs reproduction` and its request. */
+  /** A duplicate needs no reproduction: drops the planned `needs reproduction`, its request and a retest request. */
   supersedesReproduction?: boolean;
 }
 
@@ -108,11 +108,12 @@ export function mergePlan(plan: TriagePlan, step: string, patch: PlanPatch): Tri
     removeLabels: unique([...plan.removeLabels, ...(patch.removeLabels ?? [])]).filter((label) => !keepLabels.includes(label)),
     mentions,
     areas: unique([...plan.areas, ...(patch.areas ?? [])]),
-    facts: [...plan.facts, ...(patch.facts ?? [])].filter((fact) => !drop || fact !== "REPRODUCTION_REQUEST"),
+    // A retest asks about a reproduction too, so it goes with it.
+    facts: [...plan.facts, ...(patch.facts ?? [])].filter((fact) => !drop || (fact !== "REPRODUCTION_REQUEST" && fact !== "RETEST_REQUEST")),
     escalate: plan.escalate || (patch.escalate ?? false),
     security: plan.security || (patch.security ?? false),
     skipped: patch.skipped ?? plan.skipped,
-    retest: patch.retest ?? plan.retest ?? null,
+    retest: drop ? null : (patch.retest ?? plan.retest ?? null),
     keepLabels,
     type: patch.type ?? plan.type,
     steps: unique([...plan.steps, step]),
