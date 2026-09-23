@@ -2,20 +2,11 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 
 import { isEnabled } from "../config";
-import { loadTriageContext } from "../lib/context";
-import { gh, linkedIssues, loadRepoConfig } from "../lib/github";
-import { kindOf } from "../lib/issue-forms";
+import { loadRepoConfig } from "../lib/github";
 import { updatePlan } from "../lib/plan";
+import { getPullRequest, pullRequestTargets } from "../lib/steps/pull-request";
 import { markOnce } from "../lib/store";
 import { runId } from "../lib/tool";
-
-const pullRequestSchema = z.object({
-  title: z.string(),
-  body: z.string().nullable(),
-  html_url: z.string(),
-  author_association: z.string().default("NONE"),
-  user: z.object({ login: z.string() }).nullable(),
-});
 
 export default defineTool({
   description:
@@ -30,18 +21,12 @@ export default defineTool({
     const config = await loadRepoConfig({ owner, repo }, ctx.abortSignal);
     if (!config || !isEnabled(config, "pr")) return { issues: [] as number[] };
 
-    const pr = await gh(pullRequestSchema, `/repos/${owner}/${repo}/pulls/${pullRequestNumber}`, { owner, signal: ctx.abortSignal });
+    const pr = await getPullRequest({ owner, repo }, pullRequestNumber, ctx.abortSignal);
     const issues: number[] = [];
-
-    for (const issueNumber of linkedIssues(pr, `${owner}/${repo}`).slice(0, 5)) {
+    for (const { issueNumber, dryRun } of await pullRequestTargets({ owner, repo }, pr, ctx.abortSignal)) {
       const ref = { owner, repo, issueNumber };
-      const context = await loadTriageContext(ref, ctx.abortSignal).catch(() => null);
-      if (!context || context.issue.isPullRequest || context.issue.state !== "open") continue;
-
-      // Only a request that was never discussed. A bug report needs no warning.
-      const request = kindOf(context.issue, context.kinds)?.report === false;
-      if (!request || !(context.dryRun || (await markOnce(ref, "enhancement-pr")))) continue;
-      await updatePlan(runId(ctx), ref, context.dryRun, "link_pull_request", {
+      if (!dryRun && !(await markOnce(ref, "enhancement-pr"))) continue;
+      await updatePlan(runId(ctx), ref, dryRun, "link_pull_request", {
         mentions: [{ template: "enhancement_pr", detail: `${pr.html_url} by @${pr.user?.login ?? "ghost"}.` }],
       });
       issues.push(issueNumber);
