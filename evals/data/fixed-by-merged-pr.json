@@ -54,18 +54,5 @@
       "release": "v1.4.0"
     }
   ],
-  "upstreamCandidates": [],
-  "reproduction": {
-    "url": "https://github.com/limwei/acme-input-caret-repro",
-    "kind": "github",
-    "resolves": true,
-    "usesPackage": true,
-    "blankTemplate": false,
-    "version": "1.3.0",
-    "repository": {
-      "owner": "limwei",
-      "repo": "acme-input-caret-repro",
-      "ref": null
-    }
-  }
+  "upstreamCandidates": []
 }

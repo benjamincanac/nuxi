@@ -10,12 +10,8 @@ description: Use when a bug has or lacks a reproduction, to phrase the request, 
 
 ## A reproduction is present
 
-`validate_reproduction` checks three things and returns them in `checks`:
+`validate_reproduction` never opens a link. It returns the reproduction `links` it found and flags the ones that are the unmodified starter template. Never say that a link does not open, that the reproduction works or that the bug was confirmed.
 
-- `resolves`: the link answers.
-- `usesPackage`: the project depends on the repository's package. `null` means it could not be read, which is fine for StackBlitz projects, CodeSandbox devboxes and the repository's own playground.
-- `blankTemplate`: the link is the unmodified starter.
+When every link is the starter, the plan switches to `needs reproduction`. Say that the link is the unmodified starter, then the templated request follows.
 
-When `valid` is false the plan switches to `needs reproduction`. Say which check failed in plain words, then the templated request follows.
-
-When the facts say the reproduction is behind the latest version, ask the reporter to retest on the latest version first and name both versions. This is asked once per issue.
+When the facts say the report is behind the latest version, ask the reporter to retest on the latest version first and name both versions. This is asked once per issue.

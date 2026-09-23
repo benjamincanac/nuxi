@@ -42,19 +42,8 @@ const fixedCandidateSchema = z.object({
   release: z.string().nullable(),
 });
 
-const reproductionSchema = z.object({
-  url: z.string(),
-  kind: z.enum(["stackblitz", "codesandbox", "github", "playground", "snippet"]),
-  resolves: z.boolean(),
-  usesPackage: z.boolean().nullable(),
-  blankTemplate: z.boolean(),
-  version: z.string().nullable(),
-  repository: z.object({ owner: z.string(), repo: z.string(), ref: z.string().nullable() }).nullable(),
-});
-
 export type SimilarCandidate = z.output<typeof candidateSchema>;
 export type FixedCandidate = z.output<typeof fixedCandidateSchema>;
-export type ReproductionCheck = z.output<typeof reproductionSchema>;
 
 /** Offline issue used by the evals. Lives in `evals/data/<repo>.json`, addressed as `fixture/<repo>#1`. */
 const fixtureSchema = z.object({
@@ -62,6 +51,8 @@ const fixtureSchema = z.object({
   latestVersion: z.string().default("1.0.0"),
   /** What the issue forms of a real repository would give. Fixtures have no forms to read. */
   intakeLabels: z.array(z.string()).default(["triage"]),
+  /** The label of the version field a real form would have. Fixtures write it as a heading of their body. */
+  versionHeading: z.string().nullable().default("Environment"),
   /** Kinds a real repository would declare in its forms. Defaults to forms that set an Issue Type of the same name. */
   kinds: z
     .array(z.object({ name: z.string(), description: z.string().default(""), type: z.string().nullable().default(null), labels: z.array(z.string()).default([]), report: z.boolean().default(false) }))
@@ -79,7 +70,6 @@ const fixtureSchema = z.object({
   similar: z.array(candidateSchema).default([]),
   fixedCandidates: z.array(fixedCandidateSchema).default([]),
   upstreamCandidates: z.array(candidateSchema).default([]),
-  reproduction: reproductionSchema.nullable().default(null),
 });
 
 export type Fixture = z.output<typeof fixtureSchema>;
@@ -122,7 +112,7 @@ async function loadFixture(ref: IssueRef): Promise<TriageContext> {
     },
     // Fixtures list their areas by name, there is no repository to glob.
     areas: config.areas.flatMap((group) => group.names.map((name) => toArea(name, group))),
-    reproduction: reproductionFromConfig(config),
+    reproduction: { ...reproductionFromConfig(config), versionHeading: fixture.versionHeading },
     intakeLabels: fixture.intakeLabels,
     kinds: fixture.kinds,
     humanLabels: new Set(),

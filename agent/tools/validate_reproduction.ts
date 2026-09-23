@@ -6,7 +6,7 @@ import { issueInput, requireContext, runId } from "../lib/tool";
 
 export default defineTool({
   description:
-    "Validates the reproduction of a bug: the link resolves, the project depends on the repo's package, it is not the blank template, and which version it uses compared to the latest. Records the outcome in the run's plan.",
+    "Checks the reproduction of a bug without opening it: whether its links are only the unmodified starter template, and whether the reported version is behind the latest. Records the outcome in the run's plan.",
   inputSchema: issueInput,
   label: { start: ({ owner, repo, issueNumber }) => `Validate reproduction of ${owner}/${repo}#${issueNumber}` },
   async execute(ref, ctx) {
@@ -16,7 +16,7 @@ export default defineTool({
     return {
       valid: outcome.valid !== null,
       latestVersion: outcome.latestVersion,
-      checks: outcome.checks,
+      links: outcome.links,
       facts: outcome.patch.facts ?? [],
     };
   },

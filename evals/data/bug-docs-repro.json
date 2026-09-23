@@ -34,27 +34,18 @@
   },
   "latestVersion": "1.4.0",
   "issue": {
-    "title": "Add an option to pin columns in the table",
-    "body": "### Description\n\nIt would be great if `UTable` had a `pinned` option per column, so the first column stays visible while the rest scrolls horizontally. Right now this needs custom CSS on every table.\n\n### Additional context\n\nMost data grid libraries ship this. Happy to open a pull request if the API is agreed on.",
-    "author": "mkowalczyk",
+    "title": "`UInput` floating label background differs from the input in some theme presets",
+    "body": "### Environment\n\n- @acme/ui: 1.4.0\n\n### Reproduction\n\n- Go to https://acme-ui.example.com/docs/components/input#with-floating-label\n- Change the theme preset from `Default` to `Mono`\n- The floating label and the input have different backgrounds\n- Same with Sky, Mint and Iris\n\n### Description\n\nThe background of the floating label does not match the input background for some presets.\n\nPotential fix: set the label background to `transparent` and use `peer-focus:bg-default` on focus.",
+    "author": "reporter",
     "authorAssociation": "NONE",
-    "labels": [],
+    "labels": [
+      "triage"
+    ],
     "type": null,
-    "createdAt": "2026-08-12T08:45:00Z",
+    "createdAt": "2026-09-14T13:59:41Z",
     "comments": []
   },
   "similar": [],
   "fixedCandidates": [],
-  "upstreamCandidates": [],
-  "kinds": [
-    {
-      "name": "Bug report",
-      "description": "Report something that does not work.",
-      "labels": [
-        "bug"
-      ],
-      "report": true
-    }
-  ],
-  "intakeLabels": []
+  "upstreamCandidates": []
 }

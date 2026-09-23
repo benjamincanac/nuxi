@@ -48,7 +48,6 @@
   "similar": [],
   "fixedCandidates": [],
   "upstreamCandidates": [],
-  "reproduction": null,
   "kinds": [
     {
       "name": "Bug report",
