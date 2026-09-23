@@ -11,7 +11,6 @@ const MANAGED: Record<string, LabelStyle> = {
   question: { color: "d876e3", description: "Usage question, better suited to a discussion" },
   "needs verification": { color: "fbca04", description: "Likely fixed, waiting for the reporter to confirm" },
   "needs reproduction": { color: "e99695", description: "Needs a minimal reproduction to act on" },
-  a11y: { color: "5319e7", description: "Accessibility" },
   stale: { color: "eeeeee", description: "Idle and likely obsolete" },
 };
 

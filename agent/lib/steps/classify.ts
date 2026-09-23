@@ -156,8 +156,6 @@ export async function classify(context: TriageContext, signal?: AbortSignal): Pr
     }
   }
 
-  if (isEnabled(config, "a11y") && answers.is_a11y.probability >= t.labels) labels.push("a11y");
-
   if (isEnabled(config, "area")) {
     const byId = answers as Record<string, { type: string; probability?: number }>;
     const found: string[] = [];
