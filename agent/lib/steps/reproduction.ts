@@ -134,8 +134,8 @@ export async function validateReproduction(context: TriageContext, signal?: Abor
     patch.addLabels = issue.labels.includes("needs reproduction") ? [] : ["needs reproduction"];
     patch.removeLabels = context.intakeLabels;
     patch.facts = [`The reproduction is the unmodified starter template: ${links.map((link) => link.url).join(", ")}.`, "REPRODUCTION_REQUEST"];
-  } else if (valid?.kind !== "playground" && reported && latestVersion && isBehind(reported, latestVersion)) {
-    // Not on the repository's own playground, which runs its current release whatever the reporter's project is on.
+  } else if (valid && valid.kind !== "playground" && reported && latestVersion && isBehind(reported, latestVersion)) {
+    // Only a sandbox or a repository pins a version. The repository's own playground and docs run its current release.
     // Asked once. The sweep would otherwise repeat it on every run.
     const first = context.dryRun ? true : await markOnce(issue, "retest-on-latest");
     if (first) {
