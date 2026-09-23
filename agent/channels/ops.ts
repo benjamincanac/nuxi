@@ -99,7 +99,9 @@ export default defineChannel({
           return Response.json({ dispatched: await dispatch(to, OPS_AUTH, item) });
         }
         case "sweep": {
-          const summary = await sweepRepo(config, { force: true, limit: body.data.limit, explicit, stagger: production });
+          // Unchanged issues are skipped, as on the daily sweep, so repeated calls with `limit` work
+          // through a backlog. `reset` first to evaluate everything again.
+          const summary = await sweepRepo(config, { limit: body.data.limit, explicit, stagger: production });
           if (!production) waitUntil(drainAndDispatch(to, OPS_AUTH, summary.queued + summary.upstreamClosed));
           return Response.json(summary);
         }

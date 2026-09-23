@@ -63,7 +63,7 @@ async function listSweepable(config: RepoConfig, intakeLabels: readonly string[]
  * issue that did neither but may be affected by a release published since the last sweep is queued
  * as a `release`, which only re-checks the fix.
  */
-export async function sweepRepo(config: RepoConfig, options: { force?: boolean; limit?: number; explicit?: boolean; stagger?: boolean } = {}): Promise<SweepSummary> {
+export async function sweepRepo(config: RepoConfig, options: { limit?: number; explicit?: boolean; stagger?: boolean } = {}): Promise<SweepSummary> {
   const repo = `${config.owner}/${config.repo}`;
   const [intakeLabels, kinds] = await Promise.all([loadIntakeLabels(config), loadIssueKinds(config)]);
   const [issues, releases, lastSeen] = await Promise.all([
@@ -91,7 +91,7 @@ export async function sweepRepo(config: RepoConfig, options: { force?: boolean; 
     // The release is deliberately not part of the fingerprint. It changes whether the issue is
     // fixed, nothing about the issue itself, so a publish must not re-triage the whole backlog.
     const fingerprint = `${issue.updatedAt}:${thresholdsCrossed(issue, config)}`;
-    const changed = options.force === true || !(await alreadyEvaluated(issue, fingerprint));
+    const changed = !(await alreadyEvaluated(issue, fingerprint));
     // An unchanged issue is only worth a session when the release could have fixed it.
     if (!changed && !(newRelease && releaseCheckApplies(config, issue, kinds, await getClassified(issue)))) {
       unchanged++;
