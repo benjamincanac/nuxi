@@ -3,7 +3,7 @@ import { listOpenIssues, listReleases, loadRepoConfig, type Issue } from "./gith
 import { kindOf, loadIntakeLabels, loadIssueKinds, type IssueKind } from "./issue-forms";
 import { openSetupPullRequest } from "./setup";
 import { closedUpstreamPairs } from "./steps/upstream";
-import { alreadyEvaluated, enqueue, getClassified, getLastSeenRelease, setLastSeenRelease, takeRepoPasses, trackUpstreamPair, type Classified, type QueueItem } from "./store";
+import { alreadyEvaluated, enqueue, markEvaluated, getClassified, getLastSeenRelease, setLastSeenRelease, takeRepoPasses, trackUpstreamPair, type Classified, type QueueItem } from "./store";
 
 const DAY_MS = 24 * 60 * 60_000;
 /** Labels tia applies that wait on someone. The intake labels of the repository are swept too. */
@@ -100,6 +100,7 @@ export async function sweepRepo(config: RepoConfig, options: { limit?: number; e
     // Spread over time so the queue starts a few sessions per minute.
     const delay = options.stagger === false ? 0 : Math.floor(queued / DISPATCH_BATCH) * 60_000;
     await enqueue({ ...base, issueNumber: issue.issueNumber, reason: changed ? "sweep" : "release", notBefore: Date.now() + delay });
+    if (changed) await markEvaluated(issue, fingerprint);
     queued++;
   }
 
