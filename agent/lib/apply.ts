@@ -98,8 +98,8 @@ export async function applyPlan(
   intakeLabels: readonly string[],
   kinds: readonly IssueKind[],
 ): Promise<AppliedActions> {
-  // Labels of a kind are the repository's own, from its issue forms. Everything else has to be one of the bot's.
-  const allowed = (label: string) => isAllowedLabel(config, label) || kinds.some((kind) => kind.labels.includes(label));
+  // Labels of a kind and intake labels are the repository's own, from its issue forms. Everything else has to be one of the bot's.
+  const allowed = (label: string) => isAllowedLabel(config, label) || intakeLabels.includes(label) || kinds.some((kind) => kind.labels.includes(label));
   const addedLabels = plan.addLabels.filter((label) => allowed(label) && !currentLabels.includes(label));
   const removable = plan.removeLabels.filter((label) => currentLabels.includes(label));
   // Intake labels come from the issue forms, so they count as applied by the reporter. They are the only ones of those the bot removes.

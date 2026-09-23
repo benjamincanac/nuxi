@@ -89,8 +89,11 @@ export function mergePlan(plan: TriagePlan, step: string, patch: PlanPatch): Tri
   return {
     ...plan,
     setType: patch.setType ?? plan.setType,
-    addLabels: unique([...plan.addLabels, ...(patch.addLabels ?? [])]).filter((label) => !drop || label !== "needs reproduction"),
-    removeLabels: unique([...plan.removeLabels, ...(patch.removeLabels ?? [])]),
+    // A later step wins over an earlier one on the same label, such as a decision after a reproduction put the issue back in triage.
+    addLabels: unique([...plan.addLabels.filter((label) => !patch.removeLabels?.includes(label)), ...(patch.addLabels ?? [])]).filter(
+      (label) => !drop || label !== "needs reproduction",
+    ),
+    removeLabels: unique([...plan.removeLabels.filter((label) => !patch.addLabels?.includes(label)), ...(patch.removeLabels ?? [])]),
     mentions,
     areas: unique([...plan.areas, ...(patch.areas ?? [])]),
     facts: [...plan.facts, ...(patch.facts ?? [])].filter((fact) => !drop || fact !== "REPRODUCTION_REQUEST"),
