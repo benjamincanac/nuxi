@@ -313,10 +313,12 @@ export function getClassified(ref: IssueRef): Promise<Classified | null> {
 
 /** Skips the daily re-evaluation when the issue did not change and crossed no follow-up threshold. */
 export async function alreadyEvaluated(ref: IssueRef, fingerprint: string): Promise<boolean> {
-  const key = `tia:evaluated:${issueKey(ref)}`;
-  if ((await kv().get<string>(key)) === fingerprint) return true;
-  await kv().set(key, fingerprint, YEAR_SECONDS);
-  return false;
+  return (await kv().get<string>(`tia:evaluated:${issueKey(ref)}`)) === fingerprint;
+}
+
+/** Written once the issue is queued, so a failed queue write leaves it for the next sweep. */
+export function markEvaluated(ref: IssueRef, fingerprint: string): Promise<void> {
+  return kv().set(`tia:evaluated:${issueKey(ref)}`, fingerprint, YEAR_SECONDS);
 }
 
 export type RepoPass = "setup" | "sweep";

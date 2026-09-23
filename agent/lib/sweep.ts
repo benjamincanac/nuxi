@@ -3,7 +3,7 @@ import { listOpenIssues, listReleases, loadRepoConfig, type Issue } from "./gith
 import { kindOf, loadIntakeLabels, loadIssueKinds, type IssueKind } from "./issue-forms";
 import { openSetupPullRequest } from "./setup";
 import { closedUpstreamPairs } from "./steps/upstream";
-import { alreadyEvaluated, enqueue, getClassified, getLastSeenRelease, setLastSeenRelease, takeRepoPasses, trackUpstreamPair, type Classified, type QueueItem } from "./store";
+import { alreadyEvaluated, enqueue, markEvaluated, getClassified, getLastSeenRelease, setLastSeenRelease, takeRepoPasses, trackUpstreamPair, type Classified, type QueueItem } from "./store";
 
 const DAY_MS = 24 * 60 * 60_000;
 /** Labels tia applies that wait on someone. The intake labels of the repository are swept too. */
@@ -63,7 +63,7 @@ async function listSweepable(config: RepoConfig, intakeLabels: readonly string[]
  * issue that did neither but may be affected by a release published since the last sweep is queued
  * as a `release`, which only re-checks the fix.
  */
-export async function sweepRepo(config: RepoConfig, options: { force?: boolean; limit?: number; explicit?: boolean; stagger?: boolean } = {}): Promise<SweepSummary> {
+export async function sweepRepo(config: RepoConfig, options: { limit?: number; explicit?: boolean; stagger?: boolean } = {}): Promise<SweepSummary> {
   const repo = `${config.owner}/${config.repo}`;
   const [intakeLabels, kinds] = await Promise.all([loadIntakeLabels(config), loadIssueKinds(config)]);
   const [issues, releases, lastSeen] = await Promise.all([
@@ -91,7 +91,7 @@ export async function sweepRepo(config: RepoConfig, options: { force?: boolean; 
     // The release is deliberately not part of the fingerprint. It changes whether the issue is
     // fixed, nothing about the issue itself, so a publish must not re-triage the whole backlog.
     const fingerprint = `${issue.updatedAt}:${thresholdsCrossed(issue, config)}`;
-    const changed = options.force === true || !(await alreadyEvaluated(issue, fingerprint));
+    const changed = !(await alreadyEvaluated(issue, fingerprint));
     // An unchanged issue is only worth a session when the release could have fixed it.
     if (!changed && !(newRelease && releaseCheckApplies(config, issue, kinds, await getClassified(issue)))) {
       unchanged++;
@@ -100,6 +100,7 @@ export async function sweepRepo(config: RepoConfig, options: { force?: boolean; 
     // Spread over time so the queue starts a few sessions per minute.
     const delay = options.stagger === false ? 0 : Math.floor(queued / DISPATCH_BATCH) * 60_000;
     await enqueue({ ...base, issueNumber: issue.issueNumber, reason: changed ? "sweep" : "release", notBefore: Date.now() + delay });
+    if (changed) await markEvaluated(issue, fingerprint);
     queued++;
   }
 
