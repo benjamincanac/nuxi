@@ -16,7 +16,7 @@ export const classifyQuestions = {
   has_reproduction: {
     type: "boolean",
     instructions:
-      "Does the issue body or any comment point to a reproduction: a link where the problem can be run or seen, such as a StackBlitz, CodeSandbox, repository or playground link, or a page of the project's own documentation or site that shows it, or a complete minimal code snippet that can be pasted and run as is? Screenshots and partial snippets do not count.",
+      "Does the issue give a maintainer what they need to reproduce the problem without asking the reporter anything? A link counts: a StackBlitz, CodeSandbox, repository or playground, or a page of the project's own documentation or site that shows it. Written steps count just as much when they name the component or command and include the code, configuration or commands that trigger the problem, even without a link. Only a screenshot, only a description of the symptom, or a snippet that leaves out what triggers the problem does not count.",
   },
   is_answered: {
     type: "boolean",

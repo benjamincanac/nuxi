@@ -74,8 +74,8 @@ export async function checkDuplicate(context: TriageContext, signal?: AbortSigna
   if (!confident || !duplicateOf) return { answers, candidates, duplicateOf: null, patch: {} };
 
   // Matching a closed issue is not a duplicate to close. The first report was already dealt with and
-  // the problem is being raised again, which is a regression or a decision the reporter disagrees
-  // with. Either way it keeps its intake labels for a maintainer, and it never gets the `duplicate` label.
+  // the problem is being raised again. It keeps its intake labels, so a maintainer sees it with the
+  // earlier report linked, and it never gets the `duplicate` label.
   if (duplicateOf.state !== "open") {
     return {
       answers,
@@ -83,7 +83,6 @@ export async function checkDuplicate(context: TriageContext, signal?: AbortSigna
       duplicateOf,
       patch: {
         keepLabels: context.intakeLabels,
-        mentions: [{ template: "previously_reported", detail: `See #${duplicateOf.number}.` }],
         facts: [`The same thing was reported in #${duplicateOf.number}, which is closed. Link it.`],
       },
     };
