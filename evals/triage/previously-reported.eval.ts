@@ -15,11 +15,11 @@ export default defineEval({
     t.calledTool("apply_triage", {
       input: (value) => {
         const comment = (value as { comment?: string }).comment ?? "";
-        return comment.includes("412") && !/duplicate/i.test(comment);
+        return comment.includes("412") && !/duplicate|reopen/i.test(comment);
       },
     });
     t.judge(
-      "Says the same problem was already reported in issue #412 and that it is closed, without calling this issue a duplicate and without saying it will be closed.",
+      "Says the same problem was already reported in issue #412 and that it is closed, without calling this issue a duplicate, without saying it will be closed, and without asking anyone to reopen #412 or explain why it was closed.",
       { on: postedComment(turn) },
     ).atLeast(0.7);
   },
