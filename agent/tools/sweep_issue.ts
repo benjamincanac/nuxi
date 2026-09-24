@@ -78,7 +78,7 @@ export default defineTool({
         .map((release) => ({ tag: release.tag_name, notes: clip(release.body ?? "", 1_500) }));
       const result = await ask(staleQuestions, { issue: issueState(context), releases }, ctx.abortSignal);
       answers = result;
-      if (1 - result.still_relevant.probability >= config.thresholds.labels) {
+      if (1 - result.still_relevant.probability >= config.thresholds.stale) {
         patch = {
           addLabels: issue.labels.includes("stale") ? [] : ["stale"],
           mentions: [{ template: "stale", detail: `Idle for ${Math.floor(daysSince(issue.updatedAt))} days and likely obsolete given the releases since.` }],

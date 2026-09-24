@@ -25,6 +25,8 @@ export const DEFAULT_THRESHOLDS = {
   answered: 0.85,
   is_fixed: 0.8,
   needs_human: 0.5,
+  // Jev rarely calls an idle issue obsolete with confidence. Measured on nuxt/ui, 0.55 flags only issues a maintainer closed.
+  stale: 0.55,
 } as const;
 
 const probability = z.number().min(0).max(1);
@@ -37,6 +39,7 @@ const thresholdsSchema = z
     answered: probability,
     is_fixed: probability,
     needs_human: probability,
+    stale: probability,
   })
   .partial();
 
