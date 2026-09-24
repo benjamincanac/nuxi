@@ -13,7 +13,6 @@ export const DECISIONS = [
   "answered",
   "breaking",
   "area",
-  "pr",
   "stale",
 ] as const;
 

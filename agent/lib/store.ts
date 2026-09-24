@@ -31,13 +31,11 @@ export type QueueReason =
   | "issue"
   | "mention"
   | "comment"
-  | "pull_request"
   | "sweep"
   | "release"
   | "upstream_closed"
   | "manual";
 
-/** `issueNumber` is the pull request number when `reason` is `pull_request`. */
 export interface QueueItem extends IssueRef {
   reason: QueueReason;
   notBefore: number;
@@ -258,10 +256,6 @@ export async function markOnce(ref: IssueRef, marker: string): Promise<boolean> 
   if (await kv().get<number>(key)) return false;
   await kv().set(key, Date.now(), YEAR_SECONDS);
   return true;
-}
-
-export async function isMarked(ref: IssueRef, marker: string): Promise<boolean> {
-  return Boolean(await kv().get<number>(`tia:once:${issueKey(ref)}:${marker}`));
 }
 
 /** Set by the ops trigger so an explicit run on a preview deployment may write for one hour. */

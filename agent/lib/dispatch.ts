@@ -6,7 +6,6 @@ import github from "../channels/github";
 import { requireApproval, type RepoConfig } from "../config";
 import { loadRepoConfig, repositoryId } from "./github";
 import { ask, clip } from "./jev";
-import { getPullRequest, pullRequestTargets } from "./steps/pull-request";
 import { allowPreviewWrite, clearPlan, drainQueue, enqueue, forceDryRun, markOnce, type QueueItem, type QueueReason } from "./store";
 
 type Auth = Parameters<ReturnType<ScheduleToFn>["send"]>[1]["auth"];
@@ -15,7 +14,6 @@ function target(item: QueueItem): string {
   return `${item.owner}/${item.repo}#${item.issueNumber}`;
 }
 
-/** `/issues/<n>` also resolves a pull request, so one form covers both. */
 export function targetUrl(item: QueueItem): string {
   return `https://github.com/${item.owner}/${item.repo}/issues/${item.issueNumber}`;
 }
@@ -37,8 +35,6 @@ export function triagePrompt(item: QueueItem, config: RepoConfig, triageRequeste
   const mode = item.dryRun ? "This is a dry run: run the full pipeline, apply_triage only logs." : "";
   const tail = `Load the triage skill and follow it. ${mode}`.trim();
   switch (item.reason) {
-    case "pull_request":
-      return `Pull request ${target(item)} was opened or edited. Call link_pull_request with owner "${item.owner}", repo "${item.repo}", pullRequestNumber ${item.issueNumber}, then apply_triage on each returned issue. ${tail}`;
     case "comment":
       return `A new comment (id ${item.commentId ?? 0}) landed on ${target(item)}, which waits for a reproduction or a confirmation. Start with check_reproduction_comment when the issue is labeled needs reproduction, otherwise with classify_issue (${ref}). ${tail}`;
     case "mention":
@@ -63,7 +59,6 @@ const PRIORITY: Record<QueueReason, number> = {
   manual: 1,
   comment: 2,
   issue: 3,
-  pull_request: 3,
   upstream_closed: 4,
   // A release pass only re-checks the fix. Merged with a sweep of the same issue, the sweep must win.
   sweep: 5,
@@ -75,7 +70,7 @@ export function collapse(items: QueueItem[]): QueueItem[] {
   const groups = new Map<string, QueueItem>();
   for (const item of items) {
     // An upstream closure is announced once and already marked as such, so it never merges into another run.
-    const kind = item.reason === "pull_request" || item.reason === "upstream_closed" ? item.reason : "issue";
+    const kind = item.reason === "upstream_closed" ? item.reason : "issue";
     const key = `${target(item)}:${kind}`.toLowerCase();
     const current = groups.get(key);
     if (!current) {
@@ -119,9 +114,6 @@ export async function drainAndDispatch(to: ScheduleToFn, auth: Auth, limit: numb
 export async function dispatch(to: ScheduleToFn, auth: Auth, item: QueueItem): Promise<"discord" | "github" | "disabled" | "skipped"> {
   const config = await loadRepoConfig(item);
   if (!config) return "disabled";
-  // Most pull requests close nothing worth announcing. Deciding here keeps them out of a session,
-  // and so out of the approvals channel.
-  if (item.reason === "pull_request" && (await pullRequestTargets(item, await getPullRequest(item, item.issueNumber))).length === 0) return "skipped";
   // The plan lives under the issue, so the run starts from nothing rather than from the last one.
   await clearPlan(item);
   if (item.explicit) await allowPreviewWrite(item);
@@ -151,9 +143,8 @@ export async function dispatch(to: ScheduleToFn, auth: Auth, item: QueueItem): P
     return "discord";
   }
 
-  const number = item.reason === "pull_request" ? { pullRequestNumber: item.issueNumber } : { issueNumber: item.issueNumber };
   // `repositoryId` saves eve a metadata lookup of its own when it opens the thread.
   const id = await repositoryId(item).catch(() => undefined);
-  await to(github, { owner: item.owner, repo: item.repo, ...number, ...(id ? { repositoryId: id } : {}) }).send(message, { auth });
+  await to(github, { owner: item.owner, repo: item.repo, issueNumber: item.issueNumber, ...(id ? { repositoryId: id } : {}) }).send(message, { auth });
   return "github";
 }

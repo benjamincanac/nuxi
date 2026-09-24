@@ -10,7 +10,6 @@ export const MENTION_TEMPLATES = {
   upstream_closed: "the linked upstream issue was closed, worth a retest or a dependency bump.",
   needs_reproduction_idle: "still no reproduction after the follow-up.",
   stale: "this looks obsolete.",
-  enhancement_pr: "a community pull request targets this enhancement.",
   security: "this looks like a publicly disclosed security report and needs your attention now.",
 } as const;
 
