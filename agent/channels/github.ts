@@ -3,19 +3,13 @@ import { githubChannel, type GitHubInboundContext } from "eve/channels/github";
 import { z } from "zod";
 
 import { githubConnector, isProduction } from "../config";
-import { isBot, linkedIssues, loadRepoConfig, noteInstallation } from "../lib/github";
+import { isBot, loadRepoConfig, noteInstallation } from "../lib/github";
 import { SETUP_BRANCH } from "../lib/setup";
 import { enqueue, requestRepoPass, type QueueItem } from "../lib/store";
 
 // The GitHub App slug. `@tia` belongs to a GitHub user, so mentioning it would ping a stranger.
 const BOT_NAME = "hey-tia";
 const MENTION = new RegExp(`(^|\\s)@${BOT_NAME}\\b`, "i");
-
-const pullRequestBody = z.object({
-  author_association: z.string().default("NONE"),
-  body: z.string().nullable().default(null),
-  title: z.string().default(""),
-});
 
 const mergedPullRequest = z.object({
   merged: z.boolean().default(false),
@@ -92,19 +86,11 @@ export default githubChannel({
     await seen(ctx);
     // Merging the setup pull request is the moment a repository becomes tia's, and the only signal
     // of it: there is no installation hook. It sweeps the backlog instead of waiting for 03:00 UTC.
-    if (pullRequest.action === "closed") {
-      const merged = mergedPullRequest.safeParse(pullRequest.raw);
-      if (isProduction() && merged.success && merged.data.merged && merged.data.head.ref === SETUP_BRANCH) {
-        await requestRepoPass(ctx.repository.fullName, "sweep");
-      }
-      return null;
+    const merged = mergedPullRequest.safeParse(pullRequest.raw);
+    if (pullRequest.action === "closed" && isProduction() && merged.success && merged.data.merged && merged.data.head.ref === SETUP_BRANCH) {
+      await requestRepoPass(ctx.repository.fullName, "sweep");
     }
-    if (pullRequest.action !== "opened" && pullRequest.action !== "edited") return null;
-    // Most pull requests have nothing to link. Deciding here keeps a run that would write nothing
-    // out of the queue, and its summary out of the approvals channel.
-    const pr = pullRequestBody.safeParse(pullRequest.raw);
-    if (!pr.success || !linkedIssues(pr.data, ctx.repository.fullName).length) return null;
-    return queue(ctx, { issueNumber: pullRequest.pullRequestNumber, reason: "pull_request" });
+    return null;
   },
 
   events: {
