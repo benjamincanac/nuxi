@@ -4,7 +4,7 @@ import { postedComment, triagePrompt } from "./shared";
 
 export default defineEval({
   description:
-    "An issue that restates a closed issue is not a duplicate to close. It keeps `triage`, never gets the `duplicate` label, and the maintainer is asked to reopen the old one or say why it was closed.",
+    "An issue that restates a closed issue is not a duplicate to close. It keeps `triage`, never gets the `duplicate` label, and links the closed one.",
   async test(t) {
     const turn = await t.send(triagePrompt("previously-reported"));
     t.succeeded();

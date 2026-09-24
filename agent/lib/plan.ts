@@ -4,7 +4,6 @@ import { getPlan, savePlan } from "./store";
 export const MENTION_TEMPLATES = {
   convert_to_discussion: "this looks like a usage question, consider converting it to a Q&A discussion.",
   close_duplicate: "this looks like a duplicate, consider closing it.",
-  previously_reported: "the same thing was reported before and that issue is closed, worth reopening it or saying why it was closed.",
   close_answered: "this looks resolved, consider closing it.",
   verify_fixed: "this looks fixed in a release but the reporter has not confirmed.",
   upstream_closed: "the linked upstream issue was closed, worth a retest or a dependency bump.",
